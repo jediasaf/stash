@@ -1,7 +1,7 @@
 // Growth: goal, job comparison, Skills Planner, study plan, calendar, project evidence.
 import { esc, icon, btn, link, icbtn, chip, seg, tag, notice, row, tile, field, top, title, head, sec, empty, act, day } from './ui.js';
 import { JOBS, SKILLS, CHECKS, CHECK_PASS } from './data.js';
-import { job, goalJob, coverage, gaps, evidenceFor, KIND, PROOF, courseFor, prog, iso } from './store.js';
+import { job, goalJob, coverage, gaps, evidenceFor, KIND, PROOF, courseFor, prog, iso, nextMove } from './store.js';
 
 const lvl = (v) => `${v === 'Mid' ? 'Intermediate' : v}-level`;
 const DISCLAIMER = 'This compares the listing with what you have recorded. It is not a chance of being hired, and a blank does not mean you lack the skill.';
@@ -16,14 +16,14 @@ function jobCard(s, j, now) {
     <span class="tags">${live ? tag('Live · MyCareersFuture', 'src') : tag('Sample', 'sample')}${j.title === s.profile.goal.role ? tag('Your target role', 'src') : ''}</span>
     <b class="h3" style="display:block">${esc(j.title)}</b>
     <span class="sub" style="display:block">${esc(j.employer)} · ${esc(j.location)}${live ? ` · posted ${ago(j.posted, now)}` : ` · ${esc(j.mode)}`}</span>
-    ${c.total ? `${covBar(c)}<span class="sub" style="display:block">Evidence on file for ${c.have} of ${c.total} skills Stash can read</span>` : `<span class="sub" style="display:block">Stash could not match this listing's skills to yours yet</span>`}
+    ${c.total ? `<span class="tags" aria-label="Skills: filled proven, light studied or self-reported, outlined not shown yet">${c.rows.map((r) => `<span class="tag ${r.ev.best === 'project' || r.ev.best === 'assessed' ? 'k-proven' : r.ev.best === 'none' ? 'k-none' : 'k-partial'}">${esc(SKILLS[r.skill])}</span>`).join('')}</span><span class="sub" style="display:block">${c.rows.filter((r) => r.ev.best === 'project' || r.ev.best === 'assessed').length} of ${c.total} proven · ${c.have} with anything on file</span>` : `<span class="sub" style="display:block">Stash could not match this listing's skills to yours yet</span>`}
   </button>`;
 }
 
 export default {
   growth: {
     title: 'Growth', chrome: 'tabs', tab: 'growth',
-    note: 'Answers the sketch\'s "entry point?" question: Growth opens on the journey line, so the person sees where they are between goal and opportunity. Evidence is counted by kind. "Assessed" is shown as zero rather than left out.',
+    note: 'Opens on one card, "Your next move", so the person never has to work out what to do from the counts. The journey line and evidence counts follow for context.',
     render: (ctx) => {
       const s = ctx.s, p = s.profile;
       if (p.mode !== 'career') return { body: `${head('Growth')}${empty({ icon: 'target', title: 'No target role set', body: 'That is fine. You can keep learning for curiosity. Add a role when you want to see what it asks for.', actions: btn('Set a target role', { act: 'set-career' }) })}` };
@@ -33,6 +33,7 @@ export default {
       return {
         body: `${head('Growth', { over: 'Target role', acts: icbtn('edit', 'Edit goal', { go: 'ob-goal?edit=1' }) })}
           <div class="stack-s"><h2 class="h2">${esc(p.goal.role)}</h2><p class="sub">${esc(p.goal.location)} · ${esc(lvl(p.goal.level))}</p></div>
+          ${(() => { const m = nextMove(s); return m ? `<section class="card hero stack-s" aria-label="Your next move"><p class="eyebrow">Your next move</p><h2 class="h2">${esc(m.title)}</h2><p class="sub">${esc(m.sub)}${m.how ? ' ' + esc(m.how) : ''}</p><div style="margin-top:8px">${btn(m.label, { go: m.go })}</div></section>` : ''; })()}
           <ol class="journey" aria-label="Your journey">${['Goal', 'Gaps', 'Learn', 'Apply', 'Evidence', 'Roles'].map((l, i) => `<li class="${i < step ? 'done' : i === step ? 'now' : ''}" ${i === step ? 'aria-current="step"' : ''}>${l}</li>`).join('')}</ol>
           ${!j ? notice(`<span>There is no sample listing for "${esc(p.goal.role)}", so Stash cannot compare requirements. Pick one of the sample roles to see the flow.</span>`, { tone: 'warn', title: 'No listing to compare' }) : ''}
           <section>${sec('Evidence on file')}<div class="list">
@@ -52,7 +53,7 @@ export default {
 
   jobs: {
     title: 'Suggested roles', chrome: 'tabs', tab: 'growth',
-    note: 'Live listings come from MyCareersFuture, searched with the target role, and show their source and posting date. Sample listings stay below, labelled. No match percentage: each card counts the skills Stash could read that have evidence on file.',
+    note: 'Live listings come from MyCareersFuture, searched with the target role, with source and posting date. Each card shows the listing\'s skills as chips: filled when proven, light when studied or self-reported, outlined when not shown yet. No match percentage.',
     render: (ctx) => {
       const s = ctx.s, L = s.live, now = ctx.env.now, vis = (j) => !s.dismissed.includes('job:' + j.id);
       const live = (L?.jobs || []).filter(vis), samples = JOBS.filter(vis);
@@ -64,6 +65,7 @@ export default {
       return {
         top: top({ back: 'growth', title: 'Suggested roles' }),
         body: `${title('Roles to look at')}
+          <p class="cap"><span class="tag k-proven">Proven</span> <span class="tag k-partial">Studied or self-reported</span> <span class="tag k-none">Not shown yet</span></p>
           <section class="stack">${sec('Live in Singapore')}${liveBlock}</section>
           <section class="stack">${sec('Sample listings')}<p class="sub">Written for the prototype to show the full comparison.</p>
           ${samples.length ? samples.map((j) => jobCard(s, j, now)).join('') : empty({ icon: 'briefcase', title: 'No roles left', body: 'You hid every listing.', actions: btn('Show them again', { kind: 'secondary', act: 'undismiss' }) })}</section>
@@ -198,7 +200,7 @@ export default {
         top: top({ close: 'skill?id=' + k, title: `${SKILLS[k]} check` }),
         body: `<div class="empty" style="padding-top:12px"><span class="ring" style="${pass ? 'border-style:solid;border-color:var(--emerald);color:var(--emerald-strong)' : ''}">${icon(pass ? 'check' : 'refresh', 30)}</span><h1 class="h1" tabindex="-1">${score} of ${qs.length}${pass ? ': passed' : ''}</h1><p class="sub">${pass ? `"Passed skill check" is now on ${esc(SKILLS[k])}. It means you recalled the basics, not that you are certified.` : `Nothing was recorded. You need ${CHECK_PASS} to pass, and you can retake it.`}</p></div>
           ${r ? `<div class="list">${qs.map((q, i) => row({ lead: `<span class="tile num ${r.a[i] === q.answer ? 'done' : ''}">${icon(r.a[i] === q.answer ? 'check' : 'x', 18)}</span>`, title: q.q, sub: `Answer: ${q.options[q.answer]}` })).join('')}</div>` : ''}`,
-        foot: `${btn('Back to the skill', { go: 'skill?id=' + k })}${pass ? '' : btn('Retake', { kind: 'secondary', act: 'check-retake', arg: k })}`,
+        foot: pass ? `${btn(`Add proof for ${SKILLS[k]}`, { go: 'evidence?skill=' + k })}${btn('Back to the skill', { kind: 'ghost', go: 'skill?id=' + k })}` : `${btn('Retake', { act: 'check-retake', arg: k })}${btn('Back to the skill', { kind: 'ghost', go: 'skill?id=' + k })}`,
       };
     },
   },

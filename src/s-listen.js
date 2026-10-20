@@ -214,7 +214,9 @@ export default {
           <ol class="stages">${STAGES.map((t, n) => `<li class="${n < j.stage || done ? 'done' : n === j.stage && run ? 'now' : n === j.stage && j.status === 'failed' ? 'bad' : ''}"><span class="dot">${n < j.stage || done ? icon('check', 16) : n === j.stage && j.status === 'failed' ? icon('x', 16) : ''}</span>${t}</li>`).join('')}</ol>
           <dl class="kv"><dt>Job key</dt><dd>${esc(j.key)}</dd><dt>Attempt</dt><dd>${j.attempts}</dd><dt>Cost</dt><dd>Free, made on this device</dd></dl>
           ${done ? (s.episodes.find((e) => e.id === j.episodeId)?.audio ? notice('<span>Real audio was rendered on this device with an open-source voice. Download it from the episode page.</span>', { title: 'Audio ready', icon: 'check' }) : demo('This episode uses the device voice reading the approved script. No audio file was rendered.'))
-          : run ? notice('<span>You can leave this screen. The job is saved and carries on while Stash is open, and resumes when you come back.</span>')
+          : run ? `${notice('<span>You can use the rest of Stash meanwhile. Rendering pauses if the phone locks or Stash is closed, and picks up again when you come back.</span>')}
+            <div>${toggle('Notify me when it is ready', ctx.env.notify === 'denied' ? 'Notifications are blocked for this site in your browser settings.' : 'A notification when the episode is done, if your browser allows it.', j.notify, 'notify-toggle')}
+            ${toggle('Keep the screen on', ctx.env.wake ? 'Stops the phone locking until the episode is done. Uses more battery.' : 'Not supported in this browser.', j.wake, 'wake-toggle')}</div>`
           : j.status === 'cancelled' ? notice('<span>Your script and pages are kept. Starting again reuses the same job key.</span>') : ''}`,
         foot: done ? `${btn('Open episode', { go: 'p2p-episode?id=' + j.episodeId })}${btn('Back to My Stash', { kind: 'ghost', go: 'stash' })}`
           : run ? `${btn('Keep learning meanwhile', { go: 'today' })}${btn('Cancel generation', { kind: 'ghost', act: 'sheet', arg: 'cancel' })}`

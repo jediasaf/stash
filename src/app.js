@@ -9,7 +9,7 @@ import { fmt } from './ui.js';
 let S = load();
 const ui = { sheet: null, errs: null, busy: null };
 const synth = window.speechSynthesis || null;
-const env = { now: new Date(), voices: [], tts: !!synth, dev: new URLSearchParams(location.search).has('dev') };
+const env = { now: new Date(), voices: [], tts: !!synth, dev: new URLSearchParams(location.search).has('dev'), notify: 'Notification' in window ? Notification.permission : 'unsupported', wake: 'wakeLock' in navigator };
 const $device = document.getElementById('device'), $view = document.getElementById('view'), $toast = document.getElementById('toast');
 const stack = [];
 let lastId = '', saveT = 0, toastT = 0, exportText = null;
@@ -193,12 +193,19 @@ async function runJob(j) {
     await files.put('audio:' + ep.id, blob); if (audioFor === ep.id) audioFor = null;
     S.episodes = S.episodes.filter((e) => e.id !== ep.id); S.episodes.unshift(ep);
     Object.assign(j, { status: 'done', stage: 4, progress: 1, episodeId: ep.id }); persist(); toast('Episode ready: ' + ep.title); render();
+    releaseWake(); if (j.notify && env.notify === 'granted') { try { new Notification('Your episode is ready', { body: ep.title, tag: 'stash-' + ep.id }); } catch { /* some browsers only notify from a service worker */ } }
   } catch (e) {
     if (e.cancelled || my !== jobRun) return;
-    Object.assign(j, { status: 'failed', error: e.sim ? 'sim' : e.message || 'The voice engine stopped' }); persist();
+    Object.assign(j, { status: 'failed', error: e.sim ? 'sim' : e.message || 'The voice engine stopped' }); persist(); releaseWake();
     toast('Generation stopped. Your script is saved.'); if (route().id === 'p2p-generate') nav('p2p-error'); else render();
   }
 }
+
+// ---------- waiting for audio: notification and screen wake lock ----------
+let wakeLock = null;
+async function holdWake() { try { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); return true; } catch { return false; } }
+function releaseWake() { wakeLock?.release().catch(() => {}); wakeLock = null; }
+document.addEventListener('visibilitychange', () => { const j = S.jobs.find((x) => x.status === 'running'); if (document.visibilityState === 'visible' && j?.wake && !wakeLock) holdWake(); });
 
 // ---------- live job listings (MyCareersFuture via /api/jobs) ----------
 let liveBusy = false;
@@ -349,6 +356,19 @@ const ACT = {
     render(); toast('Audio downloaded');
   },
   'live-refresh'() { fetchLive(true); },
+  async 'notify-toggle'() {
+    const j = S.jobs.find((x) => x.status === 'running'); if (!j) return;
+    if (j.notify) { j.notify = false; return commit(); }
+    if (!('Notification' in window)) { env.notify = 'unsupported'; render(); return toast('This browser cannot show notifications.'); }
+    env.notify = Notification.permission === 'default' ? await Notification.requestPermission() : Notification.permission;
+    j.notify = env.notify === 'granted'; commit(); if (!j.notify) toast('Notifications are blocked for this site.');
+  },
+  async 'wake-toggle'() {
+    const j = S.jobs.find((x) => x.status === 'running'); if (!j) return;
+    if (j.wake) { j.wake = false; releaseWake(); return commit(); }
+    if (!env.wake) return toast('This browser cannot keep the screen on.');
+    j.wake = await holdWake(); commit(); if (!j.wake) toast('The screen could not be kept on.');
+  },
   'check-submit'(k) {
     const qs = CHECKS[k], a = (S.draft.check?.skill === k && S.draft.check.a) || []; if (qs.some((_, i) => a[i] == null)) return;
     const score = qs.filter((q, i) => a[i] === q.answer).length, prev = S.checks?.[k];

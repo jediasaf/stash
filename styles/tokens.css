@@ -19,7 +19,7 @@
   --surface-solid: #FFFFFF;
   --bar: rgba(255, 255, 255, 0.78);
   --bar-solid: #FFFFFF;
-  --edge: #C3C3C3;
+  --edge: rgba(3, 4, 4, 0.08);   /* card edges: light, so cards read as surfaces, not boxes */
   --hair: rgba(3, 4, 4, 0.10);
   --field-border: #878C8C;     /* 3.4:1 on white; #C3C3C3 alone is too faint for inputs */
   --scrim: rgba(3, 4, 4, 0.40);
@@ -29,7 +29,7 @@
   --danger-bg: #FCE9E6;
   --info-bg: #EAF2FB;
   --focus: #030404;
-  --shadow-1: 0 1px 2px rgba(3, 4, 4, 0.04), 0 10px 28px rgba(3, 4, 4, 0.06);
+  --shadow-1: 0 1px 2px rgba(3, 4, 4, 0.05), 0 8px 24px rgba(3, 4, 4, 0.07);
   --shadow-2: 0 -1px 0 rgba(255, 255, 255, 0.8) inset, 0 16px 40px rgba(3, 4, 4, 0.14);
   --blur: blur(20px) saturate(1.3);
   --r-card: 20px;

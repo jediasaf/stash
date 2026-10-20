@@ -1,7 +1,7 @@
 // Today, Explore, the course flow, My Stash, import and export.
 import { esc, icon, btn, link, icbtn, chip, seg, tag, notice, row, tile, bar, field, top, title, head, sec, empty, act, go, day, mins, fmt } from './ui.js';
 import { COURSES, SKILLS, TOPICS, SAMPLE_EPISODES } from './data.js';
-import { course, prog, idea, allIdeas, recommended, why, episode, iso } from './store.js';
+import { course, prog, idea, allIdeas, recommended, why, episode, iso, nextMove, KIND } from './store.js';
 
 const greet = (d) => (d.getHours() < 12 ? 'Good morning' : d.getHours() < 18 ? 'Good afternoon' : 'Good evening');
 const saved = (s, key) => s.saved.includes(key);
@@ -45,6 +45,12 @@ export default {
             ${btn(pr.done.length ? 'Continue' : 'Start', { go: `reader?c=${c.id}&i=${Math.min(c.ideas.length - 1, pr.idea || 0)}` })}
             <div class="center">${link('Why this?', { act: 'sheet', arg: 'why:' + c.id })}</div>
           </section>` : `<section class="card hero stack"><h2 class="h2">You have finished every sample course</h2><p class="sub">Import your own notes or turn a PDF into audio.</p>${btn('Import content', { go: 'import' })}</section>`}
+          ${(() => { const m = nextMove(s); return m && m.kind === 'skill' ? `<section class="card stack-s" aria-label="Next skill to prove">
+            <p class="eyebrow">Next skill to prove</p>
+            <h2 class="h3">${esc(m.title.replace('Prove ', ''))}</h2>
+            <p class="sub">${esc(m.sub)} ${esc(m.how)}</p>
+            <div style="margin-top:6px">${btn(m.label, { kind: 'secondary', go: m.go })}</div>
+          </section>` : ''; })()}
           ${p2pBand(s)}
           ${bite ? `<section>${sec('Today\'s bite', link('More bites', { go: 'bites', chev: true }))}
             <div class="list">${row({ lead: tile('bolt'), title: bite.title, sub: `2 min · ${bite.course.topic}`, go: `reader?c=${bite.course.id}&i=${bite.course.ideas.findIndex((x) => x.id === bite.id)}` })}</div></section>` : ''}
@@ -111,7 +117,7 @@ export default {
       const at = Math.min(c.ideas.length - 1, p.idea || 0);
       return {
         top: top({ back: 'explore', right: saveBtn(s, 'course:' + c.id) }),
-        body: `<div class="stack-s"><div class="tags">${tag('Sample course', 'sample')}${tag(c.topic)}</div><h1 class="h1" tabindex="-1">${esc(c.title)}</h1><p class="sub">${c.ideas.length} ideas · ${c.minutes} min · quick check at the end</p></div>
+        body: `<div class="stack-s"><div class="tags">${tag('Sample course', 'sample')}${tag(c.topic)}</div><h1 class="h1" tabindex="-1">${esc(c.title)}</h1><p class="sub">${c.ideas.length} ideas · ${c.minutes} min · recap question at the end</p></div>
           <div>${sec('You will be able to')}<ul class="stack-s">${c.outcomes.map((o) => `<li style="display:flex;gap:10px">${icon('check', 20)}<span>${esc(o)}</span></li>`).join('')}</ul></div>
           <div>${sec(`${c.ideas.length} key ideas`)}<div class="list">${c.ideas.map((i, n) => row({ lead: `<span class="tile num ${p.done.includes(i.id) ? 'done' : ''}">${p.done.includes(i.id) ? icon('check', 18) : n + 1}</span>`, title: i.title, sub: p.done.includes(i.id) ? 'Read' : '2 min', go: `reader?c=${c.id}&i=${n}` })).join('')}</div></div>
           <div class="notice">${icon('info', 20)}<div>Finishing adds <b style="display:inline">completed learning</b> for ${c.skills.map((k) => esc(SKILLS[k])).join(', ')}. It does not certify that you can do it.</div></div>
@@ -156,13 +162,13 @@ export default {
   },
 
   quiz: {
-    title: 'Quick check', chrome: 'task',
+    title: 'Recap question', chrome: 'task',
     note: 'Real radio buttons, real feedback, retry allowed. The screen says plainly that a recall question is not an assessment of proficiency.',
     render: (ctx) => {
       const s = ctx.s, c = course(ctx.q.c), q = c.quiz, st = prog(s, c.id).quiz || {}, pick = s.draft.quizPick;
       const checked = st.choice != null;
       return {
-        top: top({ back: 'takeaway?c=' + c.id, title: 'Quick check' }),
+        top: top({ back: 'takeaway?c=' + c.id, title: 'Recap question' }),
         body: `<fieldset class="stack"><legend class="h1" tabindex="-1" style="margin-bottom:14px">${esc(q.q)}</legend>
             ${q.options.map((o, n) => `<label class="opt ${checked && n === q.answer && st.correct ? 'right' : checked && n === st.choice && !st.correct ? 'wrong' : ''}"><input type="radio" name="quiz" value="${n}" data-change="quiz-pick" ${(checked ? st.choice : pick) === n ? 'checked' : ''} ${checked && st.correct ? 'disabled' : ''}><span>${esc(o)}</span></label>`).join('')}
           </fieldset>
@@ -183,11 +189,11 @@ export default {
         body: `<div class="empty" style="padding-top:20px"><span class="ring" style="border-style:solid;border-color:var(--emerald);color:var(--emerald)">${icon('check', 32)}</span><h1 class="h1" tabindex="-1">Finished: ${esc(c.title)}</h1></div>
           <div>${sec('What was recorded')}<div class="list">
             ${row({ lead: tile('book'), title: 'Completed learning', sub: c.skills.map((k) => SKILLS[k]).join(', ') })}
-            ${row({ lead: tile('check'), title: `Quick check: correct${p.quiz?.tries > 1 ? ` on try ${p.quiz.tries}` : ''}`, sub: 'Recall only, not proficiency' })}
+            ${row({ lead: tile('check'), title: `Recap question: correct${p.quiz?.tries > 1 ? ` on try ${p.quiz.tries}` : ''}`, sub: 'Recall only, not proficiency' })}
             ${tk ? row({ lead: tile('edit'), title: 'Your takeaway', sub: `${tk.learned || tk.text}${tk.apply ? ' · Use it: ' + tk.apply : ''}` }) : ''}
           </div></div>
-          <div class="quote"><p class="eyebrow">Next</p><p>Use it on something real, then record what you did. Project evidence is stronger than a finished course.</p></div>`,
-        foot: `${btn('Add project evidence', { go: 'evidence?skill=' + c.skills[0] })}${btn('Back to Today', { kind: 'ghost', go: 'today' })}`,
+          <div class="quote"><p class="eyebrow">Next</p><p>Use it on something real, then record what you did. Proof that you used it is stronger than a finished course.</p></div>`,
+        foot: `${btn(`Add proof for ${SKILLS[c.skills[0]]}`, { go: 'evidence?skill=' + c.skills[0] })}${btn('Back to Today', { kind: 'ghost', go: 'today' })}`,
       };
     },
   },

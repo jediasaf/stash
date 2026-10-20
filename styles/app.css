@@ -146,6 +146,9 @@ div.row { cursor: default; }
 .tag.learning { background: var(--emerald-tint); color: var(--emerald-strong); box-shadow: inset 0 0 0 1px var(--pastel); }
 .tag.project { background: var(--pastel); color: var(--ink); }
 .tag.assessed { background: var(--emerald-strong); color: #FFFFFF; }
+.tag.k-proven { background: var(--emerald); color: var(--on-emerald); }
+.tag.k-partial { background: var(--emerald-tint); color: var(--emerald-strong); box-shadow: inset 0 0 0 1px var(--pastel); }
+.tag.k-none { background: none; color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--field-border); }
 .pglink { min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; background: none; border: 0; padding: 0; cursor: pointer; }
 .pglink .tag { text-decoration: underline; text-underline-offset: 2px; }
 .tags { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }

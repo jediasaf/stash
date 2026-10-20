@@ -1,5 +1,5 @@
 // User state: one JSON document in localStorage. Selectors below derive everything shown about skills and jobs.
-import { COURSES, JOBS, SAMPLE_EPISODES, SAMPLE_DOC, SKILLS, P2P_DEFAULTS, CHECK_PASS } from './data.js';
+import { COURSES, JOBS, SAMPLE_EPISODES, SAMPLE_DOC, SKILLS, P2P_DEFAULTS, CHECK_PASS, CHECKS } from './data.js';
 import { buildScript, toEpisode, jobKey } from './services.js';
 
 const KEY = 'stash.v2';
@@ -95,6 +95,21 @@ export function gaps(s) {
     .sort((a, b) => order[a.ev.best] - order[b.ev.best]);
 }
 export const courseFor = (skill) => COURSES.find((c) => c.skills.includes(skill));
+/** The single most useful action for one unproven skill: a quick check first, then a course, then proof. */
+export function moveFor(s, skill) {
+  const c = courseFor(skill);
+  if (CHECKS[skill] && !(s.checks || {})[skill]) return { label: 'Take the 2-minute check', go: 'check?skill=' + skill, how: 'A short check is the quickest way to show it.' };
+  if (c && !s.progress[c.id]?.completedAt) return { label: `Start ${c.title}`, go: 'course?id=' + c.id, how: `${c.title} covers it in ${c.minutes} minutes.` };
+  return { label: 'Add proof', go: 'evidence?skill=' + skill, how: 'Add a project, certificate or work sample that shows it.' };
+}
+/** One next step for the whole career journey, used by Today and Growth. */
+export function nextMove(s) {
+  if (s.profile.mode !== 'career') return null;
+  if (!goalJob(s)) return { kind: 'goal', title: 'Pick a target role to compare with', sub: 'Stash has listings to compare for the roles it suggests.', label: 'Edit my goal', go: 'ob-goal?edit=1' };
+  const g = gaps(s);
+  if (g.length) { const r = g[0]; return { kind: 'skill', skill: r.skill, title: `Prove ${SKILLS[r.skill]}`, sub: `${s.profile.goal.role} needs it. ${r.ev.best === 'none' ? 'Nothing shown yet.' : `${KIND[r.ev.best]} so far.`}`, ...moveFor(s, r.skill) }; }
+  return { kind: 'roles', title: 'Look at live roles', sub: 'Every skill your target role lists is proven.', label: 'See roles', go: 'jobs' };
+}
 
 export function makePlan(s) {
   const g = gaps(s);
