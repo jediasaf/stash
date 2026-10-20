@@ -15,11 +15,11 @@ export default {
       body: `<div style="padding-top:24px" class="stack">
         <p class="h2" style="color:var(--emerald)" aria-label="Stash">stash</p>
         ${title('Short lessons. Shortest path to your next role')}
-        <ul class="list plain" style="margin-top:28px">
+        <div class="list plain" style="margin-top:28px">
           ${row({ lead: tile('book'), title: 'Learn in five-minute ideas', sub: 'Read or listen, then try one thing.' })}
           ${row({ lead: tile('headphones'), title: 'Turn a PDF into a podcast', sub: 'Solo narration or a two-host conversation.' })}
           ${row({ lead: tile('target'), title: 'See what a target role asks for', sub: 'Compared with evidence you have recorded.' })}
-        </ul></div>`,
+        </div></div>`,
       foot: `${btn('Create account', { act: 'start-create' })}${btn('Sign in', { kind: 'secondary', go: 'signin' })}${btn('Look around first', { kind: 'ghost', act: 'guest' })}<p class="fine">Prototype with sample content. Your data stays on this device.</p>`,
     }),
   },
@@ -203,7 +203,7 @@ export default {
             <div class="btn-row" style="margin-top:12px">${btn('Export my data', { kind: 'secondary', small: true, go: 'export' })}${btn('Delete all data', { kind: 'danger', small: true, act: 'sheet', arg: 'wipe' })}</div>
           </div>
           ${ctx.env.dev ? `<div>${sec('What is connected')}
-            <ul class="list plain">${PROVIDERS.map(([n, now, need]) => row({ title: n, sub: `${esc(now)}<br><span class="cap">Live build needs: ${esc(need)}</span>`, subHtml: true })).join('')}</ul>
+            <div class="list plain">${PROVIDERS.map(([n, now, need]) => row({ title: n, sub: `${esc(now)}<br><span class="cap">Live build needs: ${esc(need)}</span>`, subHtml: true })).join('')}</div>
           </div>
           <div>${sec('Prototype controls')}
             ${toggle('Fail the next audio job', 'Demo only. Lets you test recovery.', ctx.s.demo.failNext, 'toggle', 'demo.failNext')}

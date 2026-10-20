@@ -181,11 +181,11 @@ export default {
       return {
         top: top({ close: 'today' }),
         body: `<div class="empty" style="padding-top:20px"><span class="ring" style="border-style:solid;border-color:var(--emerald);color:var(--emerald)">${icon('check', 32)}</span><h1 class="h1" tabindex="-1">Finished: ${esc(c.title)}</h1></div>
-          <div>${sec('What was recorded')}<ul class="list">
+          <div>${sec('What was recorded')}<div class="list">
             ${row({ lead: tile('book'), title: 'Completed learning', sub: c.skills.map((k) => SKILLS[k]).join(', ') })}
             ${row({ lead: tile('check'), title: `Quick check: correct${p.quiz?.tries > 1 ? ` on try ${p.quiz.tries}` : ''}`, sub: 'Recall only, not proficiency' })}
             ${tk ? row({ lead: tile('edit'), title: 'Your takeaway', sub: `${tk.learned || tk.text}${tk.apply ? ' · Use it: ' + tk.apply : ''}` }) : ''}
-          </ul></div>
+          </div></div>
           <div class="quote"><p class="eyebrow">Next</p><p>Use it on something real, then record what you did. Project evidence is stronger than a finished course.</p></div>`,
         foot: `${btn('Add project evidence', { go: 'evidence?skill=' + c.skills[0] })}${btn('Back to Today', { kind: 'ghost', go: 'today' })}`,
       };
