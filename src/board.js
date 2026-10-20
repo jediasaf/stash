@@ -6,7 +6,7 @@ import { esc } from './ui.js';
 
 const fi = new URLSearchParams(location.search).get('fi') || 'proto';
 document.body.dataset.fi = fi;
-const FI = { proto: ['03', 'Mobile prototype', 'Green glass. Translucent white over mint light, solid emerald actions.'], wire: ['02', 'Interactive wireframe', 'Structure and links. Dashed outlines are tappable; the number is the screen it opens.'], lofi: ['01', 'Lo-fi wireframe', 'Technical diagram: plain boxes, connectors and notes. Layout and flow only.'] }[fi];
+const FI = { proto: ['03', 'Mobile prototype', 'Blue glass. Translucent white over pastel light, vivid blue actions.'], wire: ['02', 'Interactive wireframe', 'Structure and links. Dashed outlines are tappable; the number is the screen it opens.'], lofi: ['01', 'Lo-fi wireframe', 'Technical diagram: plain boxes, connectors and notes. Layout and flow only.'] }[fi];
 const NOW = new Date('2026-10-12T19:10:00');
 const MINI = ['today', 'stash', 'reader', 'transcript', 'p2p-source', 'player', 'player-sheet', 'podcasts'];
 const ACT_TO = { guest: 'today', 'start-create': 'signin', signin: 'today', 'ob-finish': 'today', surprise: 'surprise', 'takeaway-save': 'quiz', 'course-complete': 'complete', 'evidence-save': 'skill', 'plan-create': 'plan', 'import-text': 'import-review', 'import-save': 'stash', 'export-run': 'export-done', 'p2p-script': 'p2p-script', 'p2p-generate': 'p2p-generate', 'job-retry': 'p2p-generate', play: 'player', 'rhythm-save': 'calendar', signout: 'welcome', 'set-career': 'ob-goal', 'seek-seg': 'player', 'ep-del': 'stash' };

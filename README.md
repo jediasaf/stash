@@ -100,7 +100,7 @@ Screens are pure functions of state, so the live app and the PDF boards render t
 - The original single-file prototype was not available, so this was rebuilt from the three PDFs and the phase 1 paper sketch.
 - Audience (busy learners, people preparing for a role, commuters) is a hypothesis, not research.
 - Glass is used where something scrolls behind it: tab bar, mini-player, action footer, sheets. Cards are translucent without blur.
-- Links use the darker emerald (#0F6447) and field borders are darker than the starting tokens to meet contrast targets.
+- Palette (Oct 2026): vivid blue #0088FF, pastel blue #8FBBE8, light grey #C3C3C3, dark grey cyan #030404, white. Two steps are derived for contrast: links and blue text use #0068C4 (5.6:1 on white), and input borders use #878C8C (3.4:1). Text on vivid-blue buttons is #030404 (5.8:1), because white on #0088FF is only 3.5:1.
 - 48 screens instead of 40: the extra ones are states the old set only described in notes.
 
 ## Persona

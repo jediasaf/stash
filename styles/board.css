@@ -1,12 +1,12 @@
 /* Workshop boards for PDF export. One .page = one A3 landscape sheet. */
 @page { size: 420mm 297mm; margin: 0; }
 html, body { margin: 0; background: #999; }
-body { --b-bg: #EEF4EF; --b-ink: #183B2D; --b-ink2: #4B6657; --b-note: rgba(255,255,255,0.78); --b-line: rgba(24,59,45,0.16); --b-accent: #147D59; --b-font: "Nunito Sans", system-ui, sans-serif; }
+body { --b-bg: #F5F8FC; --b-ink: #030404; --b-ink2: #595F5F; --b-note: #FFFFFF; --b-line: #DADADA; --b-accent: #0068C4; --b-font: "Nunito Sans", system-ui, sans-serif; }
 body[data-fi="wire"] { --b-bg: #F4F5F3; --b-ink: #1F2D26; --b-ink2: #56645C; --b-note: #FFFFFF; --b-line: #CCD3CE; --b-accent: #1B5FA8; --b-font: system-ui, sans-serif; }
 body[data-fi="lofi"] { --b-bg: #FFFFFF; --b-ink: #000000; --b-ink2: #333333; --b-note: #FFF2CC; --b-line: #D6B656; --b-accent: #000000; --b-font: Helvetica, Arial, sans-serif; }
 .page { width: 1587px; height: 1120px; box-sizing: border-box; padding: 44px 56px 30px; background: var(--b-bg); color: var(--b-ink); font-family: var(--b-font); position: relative; overflow: hidden; page-break-after: always; break-after: page; margin: 0 auto 24px; display: flex; flex-direction: column; }
 @media print { html, body { background: none; } .page { margin: 0; } }
-body[data-fi="proto"] .page::before { content: ""; position: absolute; right: -180px; top: -260px; width: 620px; height: 620px; border-radius: 50%; background: #DCEDE2; }
+body[data-fi="proto"] .page::before { content: ""; position: absolute; right: -180px; top: -260px; width: 620px; height: 620px; border-radius: 50%; background: #E3EEFA; }
 .page > * { position: relative; }
 .page a { color: inherit; text-decoration: none; }
 .b-over { display: flex; justify-content: space-between; font-size: 13px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--b-ink2); }
@@ -18,7 +18,7 @@ body[data-fi="proto"] .page::before { content: ""; position: absolute; right: -1
 .b-label b { color: var(--b-ink); }
 .b-label { white-space: nowrap; }
 .b-label .nm { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.phone { width: 390px; height: 790px; zoom: 0.859; border-radius: 40px; overflow: hidden; box-shadow: 0 0 0 2px var(--b-ink), 0 18px 30px rgba(24,59,45,0.14); position: relative; display: flex; flex-direction: column; background: var(--mint); }
+.phone { width: 390px; height: 790px; zoom: 0.859; border-radius: 40px; overflow: hidden; box-shadow: 0 0 0 2px var(--b-ink), 0 18px 30px rgba(3,4,4,0.12); position: relative; display: flex; flex-direction: column; background: var(--mint); }
 body[data-fi="lofi"] .phone { border-radius: 0; box-shadow: 0 0 0 1px #000; }
 body[data-fi="wire"] .phone { box-shadow: 0 0 0 2px #1F2D26; }
 .phone .sb { flex: none; height: 30px; display: flex; justify-content: space-between; align-items: flex-end; padding: 0 28px 2px; font: 800 13px/1 var(--font); color: var(--ink); background: var(--mint); }
