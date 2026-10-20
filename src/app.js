@@ -48,6 +48,8 @@ function render() {
   $view.innerHTML = frame(r.id, { s: S, q: r.q, env, ui });
   $device.dataset.solid = S.a11y.solid; $device.dataset.calm = S.a11y.calm; $device.style.setProperty('--ts', S.a11y.text);
   const ns = $view.querySelector('.scroll'); if (ns) ns.scrollTop = y;
+  // A scrolling area with nothing focusable inside must itself take focus, or keyboard users cannot scroll it.
+  if (ns && ns.scrollHeight > ns.clientHeight + 1 && !ns.querySelector('a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])')) { ns.tabIndex = 0; ns.setAttribute('aria-label', 'Screen content'); }
   const sheet = $view.querySelector('.sheet');
   if (sheet && !hadSheet) sheet.querySelector('h2')?.focus();
   else if (fk) { try { $view.querySelector(fk)?.focus({ preventScroll: true }); } catch { /* selector no longer valid */ } }
