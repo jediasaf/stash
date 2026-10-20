@@ -1,0 +1,5 @@
+First idea about baselines.
+
+Second idea about holdouts.
+
+Third idea about units.

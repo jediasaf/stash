@@ -1,0 +1,92 @@
+/* Stash design tokens. Every colour, radius and type size used by the app is defined here.
+   Three fidelities share one markup: proto (green glass), wire (grey interactive), lofi (sketch). */
+:root,
+[data-fi="proto"] {
+  --emerald: #147D59;
+  --emerald-strong: #0F6447;
+  --emerald-tint: #DCEFE5;
+  --on-emerald: #FFFFFF;
+  --ink: #183B2D;
+  --ink-2: #526F5F;
+  --mint: #EDF5EE;
+  --mint-light: #D9EDE2;
+  --surface: rgba(255, 255, 255, 0.74);
+  --surface-strong: rgba(255, 255, 255, 0.90);
+  --surface-solid: #FAFDFB;
+  --bar: rgba(244, 250, 246, 0.72);
+  --bar-solid: #F4FAF6;
+  --edge: rgba(255, 255, 255, 0.95);
+  --hair: rgba(24, 59, 45, 0.12);
+  --field-border: rgba(24, 59, 45, 0.56);
+  --scrim: rgba(24, 59, 45, 0.36);
+  --warn: #7A4E00;
+  --warn-bg: #FFF3D2;
+  --danger: #A6352B;
+  --danger-bg: #FCE9E6;
+  --info-bg: #E2F1E9;
+  --focus: #0B5FA5;
+  --shadow-1: 0 1px 2px rgba(24, 59, 45, 0.05), 0 10px 28px rgba(24, 59, 45, 0.08);
+  --shadow-2: 0 -1px 0 rgba(255, 255, 255, 0.8) inset, 0 16px 40px rgba(24, 59, 45, 0.16);
+  --blur: blur(20px) saturate(1.3);
+  --r-card: 20px;
+  --r-ctl: 14px;
+  --r-sheet: 28px;
+  --r-pill: 999px;
+  --font: "Nunito Sans", ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --ts: 1;
+  --t-cap: calc(13px * var(--ts));
+  --t-sub: calc(14.5px * var(--ts));
+  --t-body: calc(16px * var(--ts));
+  --t-h3: calc(17px * var(--ts));
+  --t-h2: calc(20px * var(--ts));
+  --t-h1: calc(28px * var(--ts));
+  --t-read: calc(18px * var(--ts));
+  --gutter: 20px;
+  --light: radial-gradient(120% 55% at 88% -8%, var(--mint-light) 0%, rgba(217, 237, 226, 0) 62%),
+           radial-gradient(90% 40% at -10% 104%, #DDEEDD 0%, rgba(221, 238, 221, 0) 60%);
+}
+
+/* Opaque fallback: user setting, OS preference, or no backdrop-filter support. */
+[data-solid="true"] {
+  --surface: var(--surface-solid);
+  --surface-strong: #FFFFFF;
+  --bar: var(--bar-solid);
+  --blur: none;
+  --edge: var(--hair);
+}
+@media (prefers-reduced-transparency: reduce) {
+  :root, [data-fi="proto"] {
+    --surface: var(--surface-solid); --surface-strong: #FFFFFF; --bar: var(--bar-solid);
+    --blur: none; --edge: var(--hair);
+  }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root, [data-fi="proto"] { --bar: var(--bar-solid); --surface: var(--surface-solid); }
+}
+@media print {
+  :root, [data-fi="proto"] { --blur: none; --bar: rgba(246, 251, 248, 0.94); }
+}
+
+/* Interactive wireframe: structure and links, no brand colour. */
+[data-fi="wire"] {
+  --emerald: #2F4A3D; --emerald-strong: #1F342A; --emerald-tint: #E6EBE7; --on-emerald: #FFFFFF;
+  --ink: #1F2D26; --ink-2: #56645C; --mint: #F5F6F4; --mint-light: #F5F6F4;
+  --surface: #FFFFFF; --surface-strong: #FFFFFF; --surface-solid: #FFFFFF;
+  --bar: #FFFFFF; --bar-solid: #FFFFFF; --edge: #C3CCC6; --hair: #D5DCD7; --field-border: #7C8A82;
+  --warn: #4A4A4A; --warn-bg: #EEEEEA; --danger: #3A3A3A; --danger-bg: #EAEAEA; --info-bg: #EEF1EE;
+  --shadow-1: none; --shadow-2: none; --blur: none; --light: none;
+  --r-card: 12px; --r-ctl: 10px; --r-sheet: 16px;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Lo-fi: technical diagram, in the manner of a draw.io sheet. Plain boxes, 1px strokes, stock fills. */
+[data-fi="lofi"] {
+  --emerald: #6C8EBF; --emerald-strong: #23445D; --emerald-tint: #DAE8FC; --on-emerald: #000000;
+  --ink: #000000; --ink-2: #333333; --mint: #FFFFFF; --mint-light: #FFFFFF;
+  --surface: #FFFFFF; --surface-strong: #FFFFFF; --surface-solid: #FFFFFF;
+  --bar: #F5F5F5; --bar-solid: #F5F5F5; --edge: #000000; --hair: #B3B3B3; --field-border: #000000;
+  --warn: #000000; --warn-bg: #FFF2CC; --danger: #000000; --danger-bg: #F8CECC; --info-bg: #F5F5F5;
+  --shadow-1: none; --shadow-2: none; --blur: none; --light: none;
+  --r-card: 0px; --r-ctl: 0px; --r-sheet: 0px; --r-pill: 0px;
+  --font: Helvetica, Arial, sans-serif;
+}

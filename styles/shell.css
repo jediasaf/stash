@@ -1,0 +1,8 @@
+/* Page shell: only the phone. On a phone the app fills the screen; on a wider screen it sits in a device frame. */
+html, body { height: 100%; margin: 0; }
+body { background: var(--mint); font-family: var(--font); color: var(--ink); display: flex; justify-content: center; }
+.device { width: 100%; max-width: 430px; height: 100dvh; position: relative; background: var(--mint); }
+@media (min-width: 600px) and (min-height: 700px) {
+  body { background: #DDE7E0; align-items: center; padding: 24px; box-sizing: border-box; }
+  .device { width: 390px; height: min(844px, calc(100dvh - 48px)); border-radius: 44px; overflow: hidden; box-shadow: 0 0 0 10px #183B2D, 0 30px 60px rgba(24, 59, 45, 0.25); flex: none; }
+}
