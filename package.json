@@ -1,0 +1,9 @@
+{
+  "name": "stash",
+  "private": true,
+  "type": "module",
+  "description": "Stash mobile learning prototype. Static front end plus two Vercel functions (api/jobs, api/sync).",
+  "dependencies": {
+    "@vercel/blob": "^2.8.2"
+  }
+}

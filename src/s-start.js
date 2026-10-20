@@ -175,6 +175,7 @@ export default {
           ${skills.length ? `<div class="list">${skills.map((k) => { const ev = evidenceFor(s, k); return row({ title: SKILLS[k], extra: `<span class="tags" style="margin-top:4px">${tag(KIND[ev.best], ev.best)}</span>`, go: 'skill?id=' + k }); }).join('')}</div>` : `<p class="sub">Nothing recorded yet. Add skills you have, or finish a course.</p>`}
           <p class="cap" style="margin-top:8px">Consider relevant certification courses.</p></div>
           <div class="list">
+            ${row({ lead: tile('refresh'), title: 'Sync across devices', sub: s.sync ? `On · last synced ${s.sync.lastPush ? new Date(s.sync.lastPush).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'not yet'}` : 'Off', go: 'sync' })}
             ${row({ lead: tile('upload'), title: 'Import content', go: 'import' })}
             ${row({ lead: tile('download'), title: 'Export my data', go: 'export' })}
             ${row({ lead: tile('settings'), title: 'Preferences and privacy', go: 'settings' })}
@@ -206,8 +207,46 @@ export default {
           </div>
           <div>${sec('Prototype controls')}
             ${toggle('Fail the next audio job', 'Demo only. Lets you test recovery.', ctx.s.demo.failNext, 'toggle', 'demo.failNext')}
+            ${toggle('Record this session', 'For usability tests. Logs screens and taps with times, on this device only.', ctx.s.demo.logging, 'toggle', 'demo.logging')}
+            <p class="cap">Session log: ${(ctx.s.log || []).length} events. ${link('Download', { act: 'log-download' })} &nbsp; ${link('Clear', { act: 'log-clear' })}</p>
             <div class="btn-row">${btn('Load showcase data', { kind: 'secondary', small: true, act: 'showcase' })}</div>
           </div>` : ''}`,
+      };
+    },
+  },
+
+  sync: {
+    title: 'Sync', chrome: 'tabs', tab: 'profile',
+    note: 'Sync without a password. A random code is the only key: progress is encrypted on the device before it is stored, so the server holds only ciphertext. The screen says what syncs, what stays local, and what losing the code means.',
+    render: (ctx) => {
+      const s = ctx.s, y = s.sync, busy = ctx.ui.busy === 'sync';
+      return {
+        top: top({ back: 'profile', title: 'Sync' }),
+        body: y ? `${title('Sync is on', 'Use this code on your other phone or laptop.')}
+            <div class="card center stack-s"><p class="eyebrow">Your sync code</p><p class="h2" style="letter-spacing:0.08em;font-variant-numeric:tabular-nums" aria-label="Sync code ${esc(y.code.split('').join(' '))}">${esc(y.code)}</p><div>${link('Copy code', { act: 'sync-copy' })}</div></div>
+            ${notice('<span>Anyone with this code can open your copy, and nobody, including Stash, can open it without the code. If you lose it, the copy cannot be recovered.</span>', { title: 'Keep it private' })}
+            <dl class="kv"><dt>Last synced</dt><dd>${y.lastPush ? new Date(y.lastPush).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Not yet'}</dd><dt>Status</dt><dd>${busy ? 'Syncing...' : y.error ? 'Last try failed' : 'Up to date'}</dd></dl>
+            ${y.error ? notice(`<span>${esc(y.error)}</span>`, { tone: 'warn', title: 'Sync did not finish' }) : ''}
+            <section>${sec('What syncs')}<p class="sub">Profile, goal, skills, proof details, progress, takeaways, imports, study plan and scripts. Audio files and attachments stay on the device that made them.</p></section>`
+          : `${title('Use Stash on more than one device', 'No password needed.')}
+            <ul class="stack-s sub"><li>${icon('check', 16)} Stash makes a private code for you.</li><li>${icon('check', 16)} Your progress is encrypted on this device before it is stored, so only that code can open it.</li><li>${icon('check', 16)} Enter the code on another device to pick up where you left off.</li></ul>`,
+        foot: y ? `${btn(busy ? 'Syncing...' : 'Sync now', { act: 'sync-now', disabled: busy })}${btn('Turn off sync', { kind: 'ghost', act: 'sync-off' })}`
+          : `${btn('Turn on sync', { act: 'sync-on', disabled: busy })}${btn('I have a code', { kind: 'secondary', go: 'sync-join' })}`,
+      };
+    },
+  },
+
+  'sync-join': {
+    title: 'Use a sync code', chrome: 'task',
+    note: 'Restores a synced copy on a new device. The code is validated and the copy decrypted on the device. The person is told plainly that this replaces what is on this device.',
+    render: (ctx) => {
+      const v = ctx.s.draft.syncCode || '', e = ctx.ui.errs || {}, busy = ctx.ui.busy === 'sync';
+      return {
+        top: top({ back: 'sync', title: 'Sync' }),
+        body: `${title('Enter your sync code', 'It is on the Sync screen of your other device.')}
+          <form class="stack" data-submit="sync-join" novalidate>${field({ label: 'Sync code', bind: 'draft.syncCode', value: v, placeholder: 'ABCD-EFGH-JKLM-NPQR', err: e.code, attrs: 'autocomplete="off" autocapitalize="characters" spellcheck="false"' })}</form>
+          ${notice('<span>Your progress on this device will be replaced by the synced copy.</span>', { tone: 'warn', title: 'This replaces local data' })}`,
+        foot: btn(busy ? 'Opening...' : 'Open my copy', { act: 'sync-join', disabled: busy }),
       };
     },
   },

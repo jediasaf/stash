@@ -145,6 +145,7 @@ div.row { cursor: default; }
 .tag.self { background: #EFEFEF; }
 .tag.learning { background: var(--emerald-tint); color: var(--emerald-strong); box-shadow: inset 0 0 0 1px var(--pastel); }
 .tag.project { background: var(--pastel); color: var(--ink); }
+.tag.assessed { background: var(--emerald-strong); color: #FFFFFF; }
 .pglink { min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; background: none; border: 0; padding: 0; cursor: pointer; }
 .pglink .tag { text-decoration: underline; text-underline-offset: 2px; }
 .tags { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
@@ -155,7 +156,7 @@ div.row { cursor: default; }
 .bar i { display: block; height: 100%; background: var(--emerald); border-radius: 8px; transform-origin: left; }
 .bar.multi { display: flex; gap: 2px; background: none; }
 .bar.multi i { flex: 1; border-radius: 3px; background: var(--hair); }
-.bar.multi i.project { background: var(--emerald); } .bar.multi i.learning { background: var(--pastel); } .bar.multi i.self { background: #C3C3C3; }
+.bar.multi i.project { background: var(--emerald); } .bar.multi i.assessed { background: var(--emerald-strong); } .bar.multi i.learning { background: var(--pastel); } .bar.multi i.self { background: #C3C3C3; }
 .empty { text-align: center; padding: 36px 12px 12px; display: grid; gap: 10px; justify-items: center; }
 .empty .ring { width: 72px; height: 72px; border-radius: 50%; border: 1.5px dashed var(--field-border); display: grid; place-items: center; color: var(--ink-2); }
 .empty .btn { max-width: 300px; }

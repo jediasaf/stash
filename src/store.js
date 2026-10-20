@@ -1,5 +1,5 @@
 // User state: one JSON document in localStorage. Selectors below derive everything shown about skills and jobs.
-import { COURSES, JOBS, SAMPLE_EPISODES, SAMPLE_DOC, SKILLS, P2P_DEFAULTS } from './data.js';
+import { COURSES, JOBS, SAMPLE_EPISODES, SAMPLE_DOC, SKILLS, P2P_DEFAULTS, CHECK_PASS } from './data.js';
 import { buildScript, toEpisode, jobKey } from './services.js';
 
 const KEY = 'stash.v2';
@@ -11,7 +11,7 @@ export function seed() {
     profile: { name: '', mode: 'career', goal: { role: 'Trust & Safety Data Scientist', location: 'Singapore', level: 'Intermediate' }, current: '', interests: ['Data'], prefs: { minutes: 15, format: 'both', days: ['Mon', 'Wed', 'Fri'], time: '19:30', reminders: false }, selfSkills: [], resume: null, onboarded: false },
     a11y: { text: 1, solid: false, calm: false },
     progress: {}, // courseId -> {idea, done[], quiz:{choice,tries,correct}, completedAt}
-    takeaways: [], evidence: [], saved: [], imports: [], dismissed: [],
+    takeaways: [], evidence: [], saved: [], imports: [], dismissed: [], checks: {}, live: null, sync: null, log: [],
     plan: null, sessions: [],
     docs: [], scripts: [], jobs: [], episodes: [],
     player: { ep: null, seg: 0, t: 0, playing: false, rate: 1, sleep: null, queue: [] },
@@ -32,7 +32,8 @@ export function showcase() {
     { skill: 'communication', snippet: '…PostgreSQL Interpersonal Skills Languages…' }] };
   s.progress = { detect: { idea: 1, done: ['x1'] }, decisions: { idea: 2, done: ['d1', 'd2', 'd3'], quiz: { choice: 1, tries: 1, correct: true }, completedAt: '2026-10-06' } };
   s.takeaways = [{ id: 't1', course: 'decisions', learned: 'Lead with the decision; the method comes after.', apply: 'Put the recommendation in the first line of my Friday update.', date: '2026-10-06' }];
-  s.evidence = [{ id: 'e1', skill: 'sql', title: 'Sample entry: weekly enforcement report', link: '', note: 'Demo entry for the prototype. Shows how a SQL report built at work would be recorded as project evidence.', date: '2026-10-02', kind: 'project' }];
+  s.evidence = [{ id: 'e1', skill: 'sql', proof: 'project', title: 'Sample entry: weekly enforcement report', link: '', note: 'Demo entry for the prototype. Shows how a SQL report built at work would be recorded as proof.', date: '2026-10-02', kind: 'project' }];
+  s.checks = { policy: { score: 4, total: 4, date: '2026-10-14' } };
   s.saved = ['idea:x2', 'idea:d3', 'course:sql', 'episode:ep-baseline'];
   s.imports = [{ id: 'im1', title: 'Workshop notes', tags: ['Careers'], ideas: ['Start with the decision', 'Show one example', 'Explain uncertainty'], source: 'Pasted text', date: '2026-10-08' }];
   s.plan = makePlan(s);
@@ -65,7 +66,7 @@ export const uid = (p) => p + Math.random().toString(36).slice(2, 8);
 
 // ---------- selectors ----------
 export const course = (id) => COURSES.find((c) => c.id === id) || COURSES[0];
-export const job = (id) => JOBS.find((j) => j.id === id) || JOBS[0];
+export const job = (id, s) => JOBS.find((j) => j.id === id) || s?.live?.jobs?.find((j) => j.id === id) || JOBS[0];
 export const prog = (s, id) => s.progress[id] || { idea: 0, done: [] };
 export const goalJob = (s) => JOBS.find((j) => j.title === s.profile.goal.role) || null;
 
@@ -74,10 +75,12 @@ export function evidenceFor(s, skill) {
   const self = s.profile.selfSkills.includes(skill);
   const learning = COURSES.filter((c) => c.skills.includes(skill) && s.progress[c.id]?.completedAt);
   const project = s.evidence.filter((e) => e.skill === skill);
-  const best = project.length ? 'project' : learning.length ? 'learning' : self ? 'self' : 'none';
-  return { self, learning, project, assessed: [], best };
+  const c = (s.checks || {})[skill]; const assessed = c && c.score >= CHECK_PASS ? [c] : [];
+  const best = project.length ? 'project' : assessed.length ? 'assessed' : learning.length ? 'learning' : self ? 'self' : 'none';
+  return { self, learning, project, assessed, best };
 }
-export const KIND = { project: 'Project evidence', learning: 'Completed learning', self: 'Self-reported', none: 'Not shown yet', assessed: 'Assessed' };
+export const KIND = { project: 'Proof added', assessed: 'Passed skill check', learning: 'Completed learning', self: 'Self-reported', none: 'Not shown yet' };
+export const PROOF = { project: 'Project', certificate: 'Certificate', sample: 'Work sample' };
 
 export function coverage(s, j) {
   const rows = j.requirements.map((r) => ({ ...r, ev: evidenceFor(s, r.skill) }));
@@ -88,7 +91,7 @@ export function gaps(s) {
   const j = goalJob(s); if (!j) return [];
   const order = { none: 0, self: 1, learning: 2 };
   return j.requirements.map((r) => ({ ...r, ev: evidenceFor(s, r.skill) }))
-    .filter((r) => r.ev.best !== 'project' && !s.dismissed.includes('skill:' + r.skill))
+    .filter((r) => r.ev.best !== 'project' && r.ev.best !== 'assessed' && !s.dismissed.includes('skill:' + r.skill))
     .sort((a, b) => order[a.ev.best] - order[b.ev.best]);
 }
 export const courseFor = (skill) => COURSES.find((c) => c.skills.includes(skill));

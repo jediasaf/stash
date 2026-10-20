@@ -1,13 +1,13 @@
 // App shell: routing, state changes, audio engine, background conversion job.
 import { SCREENS, BOARDS, PRESET, frame, num } from './registry.js';
 import { load, save, seed, showcase, get, set, uid, course, prog, allIdeas, episode, makePlan, makeSessions, iso } from './store.js';
-import { readPdf, findSkills, buildScript, toEpisode, jobKey, download, transcriptFile, icsFile } from './services.js';
-import { SAMPLE_DOC, P2P_DEFAULTS, COURSES, SKILLS } from './data.js';
+import { readPdf, findSkills, buildScript, toEpisode, jobKey, download, transcriptFile, icsFile, matchSkills, files, voiceEngine, toWav, newSyncCode, normCode, pushSync, pullSync, deleteSync } from './services.js';
+import { SAMPLE_DOC, P2P_DEFAULTS, COURSES, SKILLS, CHECKS } from './data.js';
 import { exploreResults } from './s-learn.js';
 import { fmt } from './ui.js';
 
 let S = load();
-const ui = { sheet: null, errs: null };
+const ui = { sheet: null, errs: null, busy: null };
 const synth = window.speechSynthesis || null;
 const env = { now: new Date(), voices: [], tts: !!synth, dev: new URLSearchParams(location.search).has('dev') };
 const $device = document.getElementById('device'), $view = document.getElementById('view'), $toast = document.getElementById('toast');
@@ -22,9 +22,10 @@ function route() {
 function nav(r) { ui.sheet = null; ui.errs = null; const h = '#/' + r; if (location.hash === h) render(); else location.hash = h; }
 window.addEventListener('hashchange', () => {
   const h = location.hash; if (stack.at(-2) === h) stack.pop(); else stack.push(h);
+  logEvent({ screen: h.slice(2) || 'start' });
   ui.sheet = null; ui.errs = null; render();
 });
-const persist = () => { if (!save(S)) toast('Storage is full. Delete an episode or document to keep saving.'); };
+const persist = () => { if (!save(S)) toast('Storage is full. Delete an episode or document to keep saving.'); if (S.sync) { clearTimeout(syncT); syncT = setTimeout(syncPush, 4000); } };
 const later = () => { clearTimeout(saveT); saveT = setTimeout(persist, 300); };
 const commit = () => { persist(); render(); };
 function toast(msg) { $toast.textContent = msg; clearTimeout(toastT); toastT = setTimeout(() => { $toast.textContent = ''; }, 3200); }
@@ -55,6 +56,7 @@ function render() {
   lastId = r.id + JSON.stringify(r.q);
   document.title = SCREENS[r.id].title + ' · Stash';
   document.querySelectorAll('#index a').forEach((a) => a.toggleAttribute('aria-current', a.dataset.id === r.id));
+  if ((r.id === 'jobs' || r.id === 'growth') && S.profile.mode === 'career') fetchLive();
 }
 
 // ---------- helpers ----------
@@ -72,8 +74,30 @@ function draftImport(text, source) {
   S.draft.import = { ...(S.draft.import || {}), text, title: (parts[0] || 'Untitled').slice(0, 60), ideas: parts.slice(0, 12).map((x) => x.slice(0, 220)), tags: [], source };
 }
 
-// ---------- audio engine (device voice; no audio files) ----------
-let token = 0, segStart = 0, tickT = 0;
+// ---------- playback ----------
+// Episodes rendered on this device play from a real audio file (IndexedDB). Everything else falls back to the device voice.
+let token = 0, segStart = 0, tickT = 0, fileMode = false, audioFor = null;
+const audioEl = new Audio(); audioEl.preload = 'auto';
+const segAt = (ep, t) => { const i = ep.segments.findIndex((g) => t < g.t + g.d); return i < 0 ? ep.segments.length - 1 : i; };
+async function loadAudio(ep) {
+  if (audioFor === ep.id) return true;
+  const blob = await files.get('audio:' + ep.id).catch(() => null);
+  if (!blob) { ep.audioLocal = false; return false; }
+  if (audioEl.src) URL.revokeObjectURL(audioEl.src);
+  audioEl.src = URL.createObjectURL(blob); audioFor = ep.id; ep.audioLocal = true; return true;
+}
+audioEl.addEventListener('timeupdate', () => {
+  if (!fileMode) return; const ep = curEp(); if (!ep) return;
+  P().t = audioEl.currentTime; const i = segAt(ep, P().t), ch = i !== P().seg; P().seg = i; patchPlayer(ch);
+  if (P().sleep?.at && Date.now() > P().sleep.at) { P().sleep = null; pause(); toast('Sleep timer ended. Paused.'); render(); }
+});
+audioEl.addEventListener('ended', () => { if (fileMode) ended(); });
+function mediaSession(ep) {
+  if (!('mediaSession' in navigator) || !ep) return;
+  navigator.mediaSession.metadata = new MediaMetadata({ title: ep.title, artist: 'Stash', album: ep.kind === 'generated' ? 'From your PDF' : 'Stash audio' });
+  const h = { play: () => ACT.pp(), pause: () => ACT.pp(), seekbackward: () => ACT.skip(-15), seekforward: () => ACT.skip(30) };
+  for (const [k, f] of Object.entries(h)) { try { navigator.mediaSession.setActionHandler(k, f); } catch { /* unsupported action */ } }
+}
 function loadVoices() { env.voices = synth ? synth.getVoices().filter((v) => v.lang.startsWith('en')).slice(0, 12).map((v) => ({ name: v.name, lang: v.lang })) : []; }
 if (synth) { loadVoices(); synth.onvoiceschanged = () => { loadVoices(); if (route().id === 'p2p-config') render(); }; }
 function spoken(ep, sg) { let t = sg.text; for (const p of ep.pron || []) if (p.from) t = t.split(p.from).join(p.to); return t; }
@@ -85,6 +109,20 @@ function utter(text, o = {}) {
 function speak() {
   const ep = curEp(), sg = ep?.segments[P().seg]; const my = ++token; clearInterval(tickT);
   if (!sg) return ended();
+  mediaSession(ep);
+  if (ep.audio) {
+    loadAudio(ep).then((ok) => {
+      if (my !== token || !P().playing) return;
+      if (!ok) { fileMode = false; toast('Audio file is not on this device. Using the device voice.'); return speakVoice(ep, sg, my); }
+      fileMode = true; synth?.cancel(); audioEl.currentTime = P().t; audioEl.playbackRate = P().rate;
+      audioEl.play().catch(() => { P().playing = false; render(); toast('Tap play to start audio.'); });
+    });
+    return;
+  }
+  speakVoice(ep, sg, my);
+}
+function speakVoice(ep, sg, my) {
+  fileMode = false; audioEl.pause();
   segStart = performance.now() - ((P().t - sg.t) / P().rate) * 1000;
   if (synth) {
     synth.cancel();
@@ -102,17 +140,18 @@ function speak() {
 }
 function advance() { const ep = curEp(); P().seg++; if (P().seg >= ep.segments.length) return ended(); P().t = ep.segments[P().seg].t; later(); patchPlayer(true); speak(); }
 function ended() {
-  token++; clearInterval(tickT); synth?.cancel(); const p = P();
+  token++; clearInterval(tickT); synth?.cancel(); audioEl.pause(); fileMode = false; const p = P();
   const nextId = p.sleep?.v === 'end' ? null : p.queue.shift(); p.sleep = p.sleep?.v === 'end' ? null : p.sleep;
   if (nextId && episode(S, nextId)) { Object.assign(p, { ep: nextId, seg: 0, t: 0, playing: true }); speak(); }
   else { p.playing = false; p.seg = 0; p.t = 0; }
   commit();
 }
-function pause() { token++; clearInterval(tickT); synth?.cancel(); P().playing = false; persist(); }
+function pause() { token++; clearInterval(tickT); synth?.cancel(); audioEl.pause(); P().playing = false; persist(); }
 function seekTo(t) {
   const ep = curEp(); if (!ep) return; t = Math.max(0, Math.min(ep.duration - 1, +t));
-  let i = ep.segments.findIndex((g) => t < g.t + g.d); if (i < 0) i = ep.segments.length - 1;
-  P().seg = i; P().t = ep.segments[i].t; if (P().playing) speak(); patchPlayer(true); later();
+  const i = segAt(ep, t); P().seg = i;
+  if (fileMode && audioFor === ep.id) { P().t = t; audioEl.currentTime = t; patchPlayer(true); return later(); }
+  P().t = ep.segments[i].t; if (P().playing) speak(); patchPlayer(true); later();
 }
 function patchPlayer(segChanged) {
   const ep = curEp(); if (!ep) return;
@@ -123,22 +162,77 @@ function patchPlayer(segChanged) {
 }
 function play(id) { const p = P(); if (p.ep !== id) Object.assign(p, { ep: id, seg: 0, t: 0 }); p.playing = true; speak(); persist(); }
 
-// ---------- conversion job (simulated provider; real state machine) ----------
-let jobT = 0;
-function runJob(j) {
-  clearInterval(jobT);
-  jobT = setInterval(() => {
-    if (j.status !== 'running') return clearInterval(jobT);
-    j.progress = Math.min(1, j.progress + 0.03); j.stage = Math.min(3, Math.floor(j.progress * 4));
-    if (S.demo.failNext && j.progress >= 0.6) { Object.assign(j, { status: 'failed', error: 'voice' }); S.demo.failNext = false; clearInterval(jobT); persist(); toast('Generation stopped. Your script is saved.'); return route().id === 'p2p-generate' ? nav('p2p-error') : render(); }
-    if (j.progress >= 1) {
-      clearInterval(jobT); const sc = S.scripts.find((x) => x.id === j.scriptId), doc = S.docs.find((d) => d.id === sc.docId);
-      const ep = toEpisode(sc, doc); S.episodes = S.episodes.filter((e) => e.id !== ep.id); S.episodes.unshift(ep);
-      Object.assign(j, { status: 'done', stage: 4, episodeId: ep.id }); persist(); toast('Episode ready: ' + ep.title); return render();
+// ---------- conversion job: real speech rendered on this device ----------
+let jobRun = 0, paintT = 0;
+const paint = () => { if (performance.now() - paintT < 250) return; paintT = performance.now(); if (['p2p-generate', 'today', 'stash'].includes(route().id) && !ui.sheet) render(); };
+async function runJob(j) {
+  const my = ++jobRun, alive = () => my === jobRun && j.status === 'running';
+  const sc = S.scripts.find((x) => x.id === j.scriptId), doc = S.docs.find((d) => d.id === sc?.docId);
+  if (!sc || !doc) { Object.assign(j, { status: 'failed', error: 'The script or its document is missing' }); return persist(); }
+  try {
+    Object.assign(j, { stage: 0, progress: 0.02, dl: 0, line: 0, lines: sc.segments.length }); paint();
+    await voiceEngine.load((loaded, total) => { j.dl = loaded / total; j.progress = 0.02 + 0.08 * j.dl; paint(); });
+    if (!alive()) return;
+    j.stage = 1; const parts = []; let rate = 24000;
+    for (let i = 0; i < sc.segments.length; i++) {
+      if (!alive()) return;
+      if (S.demo.failNext && i >= sc.segments.length * 0.6) { S.demo.failNext = false; throw Object.assign(new Error('sim'), { sim: true }); }
+      const g = sc.segments[i], voice = g.speaker === 'B' ? sc.config.voiceB || 'am_michael' : sc.config.voiceA || 'af_heart';
+      const r = await voiceEngine.speak(spoken(sc, g), voice, g.emph ? 0.92 : 1);
+      parts.push(r.audio); rate = r.rate; j.line = i + 1; j.progress = 0.1 + 0.85 * ((i + 1) / sc.segments.length); later(); paint();
     }
-    later(); if (['p2p-generate', 'today', 'stash'].includes(route().id) && !ui.sheet) render();
-  }, 260);
+    if (!alive()) return;
+    j.stage = 2; paint();
+    const { blob, timing, duration } = toWav(parts, rate);
+    j.stage = 3; paint();
+    const ep = toEpisode(sc, doc);
+    ep.segments = ep.segments.map((g, i) => ({ ...g, t: +timing[i].t.toFixed(2), d: +timing[i].d.toFixed(2) }));
+    Object.assign(ep, { duration: Math.ceil(duration), audio: true, audioSize: blob.size, voices: { A: sc.config.voiceA, B: sc.config.voiceB } });
+    await files.put('audio:' + ep.id, blob); if (audioFor === ep.id) audioFor = null;
+    S.episodes = S.episodes.filter((e) => e.id !== ep.id); S.episodes.unshift(ep);
+    Object.assign(j, { status: 'done', stage: 4, progress: 1, episodeId: ep.id }); persist(); toast('Episode ready: ' + ep.title); render();
+  } catch (e) {
+    if (e.cancelled || my !== jobRun) return;
+    Object.assign(j, { status: 'failed', error: e.sim ? 'sim' : e.message || 'The voice engine stopped' }); persist();
+    toast('Generation stopped. Your script is saved.'); if (route().id === 'p2p-generate') nav('p2p-error'); else render();
+  }
 }
+
+// ---------- live job listings (MyCareersFuture via /api/jobs) ----------
+let liveBusy = false;
+const toLiveJob = (j) => ({ ...j, requirements: Object.entries(matchSkills(j.skills, `${j.title} ${j.summary}`)).map(([skill, names], i) => ({ id: 'r' + i, skill, must: false, text: names[0] === 'description' ? `${SKILLS[skill]} (mentioned in the description)` : `Listed: ${names.join(', ')}` })) });
+async function fetchLive(force) {
+  const q = S.profile.goal.role; if (liveBusy || !q) return;
+  const L = S.live?.q === q ? S.live : null;
+  if (!force && L && (L.status === 'ok' || L.status === 'error') && Date.now() - new Date(L.fetchedAt || L.triedAt || 0) < 30 * 6e4) return;
+  liveBusy = true; S.live = { ...(L || {}), q, status: L?.jobs?.length ? 'ok' : 'loading' }; if (!L?.jobs?.length) render();
+  try {
+    const r = await fetch(`/api/jobs?q=${encodeURIComponent(q)}&limit=12`); const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || 'Live listings are unavailable here.');
+    S.live = { q, used: d.q, asked: d.asked, status: 'ok', total: d.total, fetchedAt: d.fetchedAt, jobs: d.jobs.map(toLiveJob) };
+  } catch (e) { S.live = { ...S.live, status: S.live?.jobs?.length ? 'ok' : 'error', message: e.message === 'Failed to fetch' ? 'You seem to be offline.' : e.message, triedAt: new Date().toISOString() }; }
+  liveBusy = false; save(S); render();
+}
+
+// ---------- encrypted sync (/api/sync) ----------
+let syncT = 0, syncBusy = false;
+const syncable = () => { const { player, draft, log, live, sync, ...rest } = S; return rest; };
+async function syncPush() {
+  if (!S.sync || syncBusy) return; syncBusy = true; ui.busy = 'sync'; if (route().id === 'sync') render();
+  try { S.sync.lastPush = await pushSync(S.sync.code, syncable()); S.sync.error = null; } catch (e) { S.sync.error = e.message === 'Failed to fetch' ? 'You seem to be offline. Stash will try again.' : e.message; }
+  syncBusy = false; ui.busy = null; save(S); if (['sync', 'profile'].includes(route().id)) render();
+}
+function adopt(remote, code) {
+  const keep = { player: S.player, draft: {}, log: S.log, live: S.live };
+  S = { ...remote.state, ...keep, sync: { code, lastPush: remote.updatedAt, error: null } }; save(S);
+}
+async function syncPull() {
+  if (!S.sync) return;
+  try { const r = await pullSync(S.sync.code); if (r && r.updatedAt > (S.sync.lastPush || '')) { adopt(r, S.sync.code); render(); toast('Updated from your other device'); } } catch { /* stay local; next push retries */ }
+}
+
+// ---------- usability session log ----------
+function logEvent(e) { if (!S.demo?.logging) return; (S.log ??= []).push({ t: new Date().toISOString(), ...e }); if (S.log.length > 2000) S.log.shift(); later(); }
 
 // ---------- actions ----------
 const ACT = {
@@ -193,13 +287,14 @@ const ACT = {
 
   'self-add'(k) { if (!S.profile.selfSkills.includes(k)) S.profile.selfSkills.push(k); commit(); toast(`${SKILLS[k]} added as self-reported`); },
   'evidence-save'() {
-    const f = { skill: route().q.skill || 'forecasting', date: today(), ...(S.draft.evidence || {}) }, e = {};
-    if (!(f.title || '').trim()) e.title = 'Give the project a short title';
-    if ((f.note || '').trim().length < 20) e.note = 'Describe what you did in a sentence or two';
+    const f = { skill: route().q.skill || 'sql', proof: 'project', date: today(), ...(S.draft.evidence || {}) }, e = {}, cert = f.proof === 'certificate';
+    if (!(f.title || '').trim()) e.title = cert ? 'Add the certificate name' : 'Give it a short title';
+    if (cert && !(f.issuer || '').trim()) e.issuer = 'Add who issued it';
+    if (!cert && (f.note || '').trim().length < 20) e.note = 'Describe what you did in a sentence or two';
     if (f.link && !/^https?:\/\/\S+\.\S+/.test(f.link)) e.link = 'Use a full link starting with https://';
     if (Object.keys(e).length) { ui.errs = e; return render(); }
-    S.evidence.unshift({ id: uid('e'), skill: f.skill, title: f.title.trim(), note: f.note.trim(), link: f.link || '', date: f.date, kind: 'project' }); S.draft.evidence = null; persist();
-    nav('skill?id=' + f.skill); toast('Project evidence saved');
+    S.evidence.unshift({ id: uid('e'), skill: f.skill, proof: f.proof, title: f.title.trim(), issuer: (f.issuer || '').trim(), note: (f.note || '').trim(), link: f.link || '', file: f.file || null, date: f.date, kind: 'project' }); S.draft.evidence = null; persist();
+    nav('skill?id=' + f.skill); toast('Proof saved');
   },
   'plan-create'() { S.plan = makePlan(S); S.sessions = [...S.sessions.filter((x) => x.done), ...makeSessions(S)]; persist(); nav('plan'); toast('Study plan built from your open skills'); },
   'session-add'(date) { S.sessions.push({ id: uid('s'), date, time: S.profile.prefs.time, minutes: S.profile.prefs.minutes, title: 'Study session', done: false }); commit(); },
@@ -237,9 +332,43 @@ const ACT = {
     else { j = { id: uid('job'), key, scriptId: sc.id, status: 'running', stage: 0, progress: 0, attempts: 1, error: null, episodeId: null }; S.jobs.push(j); }
     persist(); runJob(j); nav('p2p-generate');
   },
-  'job-cancel'() { const j = S.jobs.find((x) => x.status === 'running'); if (j) j.status = 'cancelled'; clearInterval(jobT); ui.sheet = null; commit(); toast('Generation cancelled. Script kept.'); },
-  'job-retry'() { const j = S.jobs.find((x) => x.status === 'failed'); if (!j) return nav('p2p-script'); Object.assign(j, { status: 'running', attempts: j.attempts + 1, progress: j.stage * 0.25, error: null }); p2p().scriptId = j.scriptId; persist(); runJob(j); nav('p2p-generate'); },
-  'ep-del'(id) { if (P().ep === id) { pause(); P().ep = null; } S.episodes = S.episodes.filter((e) => e.id !== id); S.jobs = S.jobs.filter((j) => j.episodeId !== id); S.saved = S.saved.filter((k) => k !== 'episode:' + id); P().queue = P().queue.filter((q) => q !== id); S.draft.stashTab = 'audio'; persist(); nav('stash'); toast('Episode deleted'); },
+  'job-cancel'() { const j = S.jobs.find((x) => x.status === 'running'); if (j) j.status = 'cancelled'; jobRun++; voiceEngine.stop(); ui.sheet = null; commit(); toast('Generation cancelled. Script kept.'); },
+  'job-retry'() { const j = S.jobs.find((x) => x.status === 'failed'); if (!j) return nav('p2p-script'); Object.assign(j, { status: 'running', attempts: j.attempts + 1, progress: 0, stage: 0, error: null }); p2p().scriptId = j.scriptId; persist(); runJob(j); nav('p2p-generate'); },
+  'job-fallback'() {
+    const j = S.jobs.find((x) => x.status === 'failed'); if (!j) return nav('p2p-script');
+    const sc = S.scripts.find((x) => x.id === j.scriptId), doc = S.docs.find((d) => d.id === sc.docId), ep = toEpisode(sc, doc);
+    S.episodes = S.episodes.filter((e) => e.id !== ep.id); S.episodes.unshift(ep); Object.assign(j, { status: 'done', stage: 4, progress: 1, episodeId: ep.id, error: null });
+    persist(); nav('p2p-episode?id=' + ep.id); toast('Episode saved with the device voice');
+  },
+  async 'dl-audio'(id) {
+    const e = episode(S, id), blob = await files.get('audio:' + id).catch(() => null); ui.sheet = null;
+    if (!blob) { render(); return toast('The audio file is on the device that made it.'); }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${e.title.replace(/\W+/g, '-').toLowerCase()}.wav`; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    render(); toast('Audio downloaded');
+  },
+  'live-refresh'() { fetchLive(true); },
+  'check-submit'(k) {
+    const qs = CHECKS[k], a = (S.draft.check?.skill === k && S.draft.check.a) || []; if (qs.some((_, i) => a[i] == null)) return;
+    const score = qs.filter((q, i) => a[i] === q.answer).length, prev = S.checks?.[k];
+    S.draft.checkResult = { skill: k, a: [...a], score }; S.checks ??= {};
+    if (!prev || score >= prev.score) S.checks[k] = { score, total: qs.length, date: today() };
+    S.draft.check = null; persist(); nav('check-done?skill=' + k);
+  },
+  'check-retake'(k) { S.draft.check = null; S.draft.checkResult = null; persist(); nav('check?skill=' + k); },
+  'evidence-file-del'() { const f = S.draft.evidence?.file; if (f) files.del(f.key).catch(() => {}); S.draft.evidence.file = null; commit(); },
+  async 'sync-on'() { S.sync = { code: newSyncCode(), lastPush: null, error: null }; save(S); render(); await syncPush(); toast(S.sync?.error ? 'Sync is on, but the first copy did not save yet' : 'Sync is on'); },
+  'sync-now'() { syncPush(); },
+  async 'sync-off'() { const code = S.sync?.code; S.sync = null; commit(); if (code) { try { await deleteSync(code); toast('Sync off. The stored copy was deleted.'); } catch { toast('Sync off. The stored copy could not be deleted yet.'); } } },
+  'sync-copy'() { navigator.clipboard?.writeText(S.sync.code).then(() => toast('Code copied'), () => toast('Copy failed. Select the code instead.')); },
+  async 'sync-join'() {
+    const code = normCode(S.draft.syncCode); if (code.length !== 19) { ui.errs = { code: 'Codes have 16 letters and numbers, like ABCD-EFGH-JKLM-NPQR' }; return render(); }
+    ui.busy = 'sync'; render();
+    try { const r = await pullSync(code); ui.busy = null; if (!r) { ui.errs = { code: 'No synced copy uses that code' }; return render(); } pause(); adopt(r, code); nav('today'); toast('Your synced progress is here'); }
+    catch (e) { ui.busy = null; ui.errs = { code: e.message === 'Failed to fetch' ? 'You seem to be offline' : e.message }; render(); }
+  },
+  'log-download'() { download('stash-session-log.json', JSON.stringify(S.log || [], null, 2), 'application/json'); },
+  'log-clear'() { S.log = []; commit(); },
+  'ep-del'(id) { files.del('audio:' + id).catch(() => {}); if (P().ep === id) { pause(); P().ep = null; } S.episodes = S.episodes.filter((e) => e.id !== id); S.jobs = S.jobs.filter((j) => j.episodeId !== id); S.saved = S.saved.filter((k) => k !== 'episode:' + id); P().queue = P().queue.filter((q) => q !== id); S.draft.stashTab = 'audio'; persist(); nav('stash'); toast('Episode deleted'); },
   dl(arg) { const [id, f] = arg.split('|'), e = episode(S, id); download(`${e.title.replace(/\W+/g, '-').toLowerCase()}-transcript.${f}`, transcriptFile(e, f), f === 'vtt' ? 'text/vtt' : 'text/plain'); ui.sheet = null; render(); toast('Transcript downloaded'); },
 
   play(id) { play(id); nav('player'); },
@@ -247,13 +376,21 @@ const ACT = {
   stop() { pause(); P().ep = null; commit(); },
   skip(d) { seekTo(P().t + +d); },
   'seek-seg'(arg) { const [id, n] = arg.split('|'); if (P().ep !== id) Object.assign(P(), { ep: id }); const ep = curEp(); P().seg = +n; P().t = ep.segments[+n].t; P().playing = true; speak(); commit(); },
-  rate() { const o = [0.8, 1, 1.25, 1.5, 2]; P().rate = o[(o.indexOf(P().rate) + 1) % o.length]; if (P().playing) speak(); commit(); },
+  rate() { const o = [0.8, 1, 1.25, 1.5, 2]; P().rate = o[(o.indexOf(P().rate) + 1) % o.length]; if (fileMode) audioEl.playbackRate = P().rate; else if (P().playing) speak(); commit(); },
   sleep(v) { P().sleep = v === '0' ? null : { v, at: v === 'end' ? null : Date.now() + +v * 60000 }; commit(); toast(v === '0' ? 'Sleep timer off' : v === 'end' ? 'Stops after this episode' : `Stops in ${v} minutes`); },
   'queue-add'(id) { if (P().ep === id || P().queue.includes(id)) return toast('Already playing or queued'); P().queue.push(id); ui.sheet = null; commit(); toast('Added to queue'); },
   'queue-del'(id) { P().queue = P().queue.filter((q) => q !== id); commit(); },
 };
 
 const CHANGE = {
+  'check-pick'(el) { const k = route().q.skill; if (S.draft.check?.skill !== k) S.draft.check = { skill: k, a: [] }; S.draft.check.a[+el.dataset.q] = +el.value; commit(); },
+  async 'evidence-file'(el) {
+    const f = el.files[0]; if (!f) return; S.draft.evidence ??= {};
+    if (!/^(application\/pdf|image\/png|image\/jpeg)$/.test(f.type)) { ui.errs = { file: 'Attach a PDF, PNG or JPG' }; return render(); }
+    if (f.size > 5 * 1048576) { ui.errs = { file: 'That file is over 5 MB' }; return render(); }
+    const key = 'att:' + uid(''); try { await files.put(key, f); } catch { ui.errs = { file: 'This browser could not store the file' }; return render(); }
+    S.draft.evidence.file = { name: f.name, size: f.size, type: f.type, key }; commit();
+  },
   async resume(el) {
     const f = el.files[0]; if (!f) return;
     const base = { name: f.name, size: f.size };
@@ -311,6 +448,7 @@ function buildExport(x) {
 $view.addEventListener('click', (e) => {
   const el = e.target.closest('[data-go],[data-act]'); if (!el || el.disabled) return;
   if (el.classList.contains('scrim') && e.target !== el) return;
+  logEvent({ tap: el.dataset.act || el.dataset.go, arg: el.dataset.act ? el.dataset.arg : undefined });
   if (el.dataset.act) ACT[el.dataset.act]?.(el.dataset.arg, el);
   if (el.dataset.go) nav(el.dataset.go);
 });
@@ -341,3 +479,4 @@ const fi = new URLSearchParams(location.search).get('fi'); if (fi) $device.datas
 stack.push(location.hash);
 const running = S.jobs.find((j) => j.status === 'running'); if (running) runJob(running);
 render();
+syncPull();

@@ -9,7 +9,7 @@ This is a design prototype with real local behaviour. It is not a production app
 No build step and no dependencies to install.
 
 ```bash
-python3 -m http.server 4180 --directory ~/Downloads/Projects/stash
+python3 ~/Downloads/Projects/stash/tools/serve.py 4180 ~/Downloads/Projects/stash
 ```
 
 Open http://localhost:4180. The page shows only the phone: framed on a wide window, full screen on a phone. Add `?fi=wire` or `?fi=lofi` to the URL for the other fidelities. Sample data loads from Profile > Preferences > Load showcase data.
@@ -54,46 +54,37 @@ The PDFs, `.drawio` file and single-file HTML in `deliverables/` are generated b
 
 Screens are pure functions of state, so the live app and the PDF boards render the same code.
 
-## What really works (on the device)
+## What really works
 
-- Navigation across 48 screens, five tabs, hash routes, in-app and browser back.
-- State persists across reloads: profile, progress, takeaways, evidence, imports, plan, sessions, documents, scripts, jobs, episodes, player position, preferences. Passwords are never written to storage.
-- Sign-in and recovery forms with validation. Onboarding with a "just curious" path.
-- Resume upload: a PDF resume is read in the browser, skills it mentions are suggested with the sentence they came from, and nothing is recorded until the person taps Add (stored as self-reported). DOCX is attached but not read.
-- Course flow: reader with saved position, takeaway, quiz with retry, completion that records "completed learning".
-- Evidence model: self-reported, completed learning, project evidence, assessed (always empty). Job comparison and "skills to evidence" derive from it.
-- Study plan built from open skills, month calendar, add / tick / remove sessions, `.ics` export.
-- Import by paste or `.txt` / `.md` file with review and failure states. Export to Markdown, JSON or CSV as a real download.
-- PDF to podcast:
-  - File validation (type, 25 MB, PDF header, password, 200 pages) and text extraction in the browser with pdf.js. The file is not uploaded.
-  - Scanned and table-heavy pages are flagged; pages can be excluded or corrected by hand.
-  - Script is editable per line, with emphasis and pronunciation fixes that change playback.
-  - Generation is a stored job with stages, cancel, failure, retry and resume after reload. The job key is a hash of the script and settings, so the same script never produces a second job or episode.
-  - Player with seek, back 15 / forward 30, speed, queue, sleep timer; timestamped transcript with links back to source pages; transcript download as `.txt` and `.vtt`.
-- Accessibility settings: text size, reduce transparency, reduce motion. OS preferences are also respected.
+- Navigation across 52 screens, five tabs, hash routes, in-app and browser back.
+- State persists across reloads in `localStorage`; large files (audio, attachments) in IndexedDB. Passwords are never stored.
+- Onboarding with a "just curious" path, résumé reading (PDF, on the device, skills suggested with the sentence they came from, nothing added until confirmed).
+- Learning: 8 sample courses (5 on Trust & Safety and data), reader with saved position, takeaway split into "what I learned" and "how I'll use it", quiz with retry.
+- **Proof of skill**, four kinds kept separate:
+  - Proof added: project, certificate or work sample, with an optional PDF/image attachment kept on the device.
+  - Passed skill check: 4-question recall checks for SQL, Python, detection models, T&S policy and communication; pass with 3. Labelled as not a certification.
+  - Completed learning, and self-reported.
+- **Live jobs** from MyCareersFuture through `api/jobs.js` (public API, no key, cached 30 min). If the exact target title finds nothing, the search widens step by step and says so. Listed skills are mapped to Stash skills; the original listing opens on MyCareersFuture. Four labelled sample listings stay as a fallback.
+- **PDF to podcast with real audio.** Text is extracted on the device with pdf.js; the script is a template (no LLM, by decision); voices are rendered on the device by Kokoro-82M through kokoro-js in a Web Worker (about 90 MB downloaded once, Apache-2.0). Six voices, two-host or solo. Real progress per line, cancel, failure with retry or "use the device voice instead", resume after reload. The result is a WAV file with exact line timings, played through an audio element with seek, speed, sleep timer, queue and lock-screen controls, and downloadable.
+- **Sync across devices** without a password: a random 16-character code. State is encrypted on the device (AES-GCM, key from PBKDF2) and stored as ciphertext in a private Vercel Blob store through `api/sync.js`. Turning sync off deletes the stored copy. Audio and attachments do not sync.
+- Study plan, month calendar and `.ics` export; import and export (Markdown, JSON, CSV).
+- Accessibility settings: text size, reduce transparency, reduce motion.
+- Usability testing: with `?dev=1`, Preferences can record a session log (screens and taps with times, on the device) and download it. See `docs/usability-test.md`.
 
-## What is simulated
+## What is still simulated or missing
 
-| Area | Today | Live build needs |
+| Area | Today | To go further |
 |---|---|---|
-| Accounts | Any valid email signs in, in this browser only | Auth service with email reset |
-| Script writing | Template that quotes sentences from the selected pages and adds linking lines | LLM endpoint, key held server-side |
-| Voice | Device speech synthesis reads the script. No audio file exists, so no audio download | TTS provider, job queue, file storage |
-| Generation progress | Timed stages, about 10 s | Real job status from the provider |
-| Cost | "None (demo)" | Per-character quote shown before approval |
-| OCR | Not connected; offered and declined honestly | OCR provider |
-| Resume | PDF read on the device with keyword matching; DOCX not read | Server parser for DOCX and scanned resumes |
-| Jobs | Three sample listings | Listings API with source and posting date |
-| Web link and podcast feed import | Disabled with the reason | Fetch service |
-| Languages other than English | Disabled | Translation step |
+| Accounts | Demo sign-in; sync code instead of a password | Real accounts with recovery |
+| Script writing | Template quoting the PDF | Optional LLM step (deliberately not built) |
+| OCR | Not connected | OCR provider |
+| Voice speed | 2 to 4x slower than real time on a laptop CPU | WebGPU when stable, or server rendering for slow phones |
+| Jobs | One source | More sources, saved searches |
+| DOCX résumés | Attached, not read | Server parser |
 
-## Integrations still to build
+## Server side
 
-1. A small backend that holds provider keys. Nothing in this repo should ever contain one.
-2. `services.js`: replace `buildScript` with an LLM call that returns the same segment shape (`speaker`, `text`, `kind`, `page`), keeping `kind: 'added'` for anything not in the PDF.
-3. `app.js` `runJob`: replace the timer with polling a real job, sending `jobKey` as the idempotency key.
-4. Store rendered audio and swap the speech-synthesis engine for an `<audio>` element. The player UI does not change.
-5. Explicit consent step before any document text leaves the device.
+`api/jobs.js` and `api/sync.js` are Vercel functions. Sync needs `BLOB_READ_WRITE_TOKEN`, which Vercel sets when the `stash-sync` Blob store is linked to the project. `vercel.json` sets cross-origin isolation headers so the voice model can use several CPU threads. For local work, `tools/serve.py` mirrors both functions (sync kept in memory) and sends the same headers.
 
 ## Assumptions worth knowing
 
@@ -101,7 +92,7 @@ Screens are pure functions of state, so the live app and the PDF boards render t
 - Audience (busy learners, people preparing for a role, commuters) is a hypothesis, not research.
 - Glass is used where something scrolls behind it: tab bar, mini-player, action footer, sheets. Cards are translucent without blur.
 - Palette (Oct 2026): vivid blue #0088FF, pastel blue #8FBBE8, light grey #C3C3C3, dark grey cyan #030404, white. Two steps are derived for contrast: links and blue text use #0068C4 (5.6:1 on white), and input borders use #878C8C (3.4:1). Text on vivid-blue buttons is #030404 (5.8:1), because white on #0088FF is only 3.5:1.
-- 48 screens instead of 40: the extra ones are states the old set only described in notes.
+- 52 screens instead of 40: the extra ones are states the old set only described in notes, plus skill checks and sync.
 
 ## Persona
 

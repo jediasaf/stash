@@ -36,6 +36,46 @@ export const COURSES = [
     quiz: { q: 'One item in a thousand violates policy. A model never flags anything. What is true?', options: ['It is 99.9% accurate and fit for use', 'It is 99.9% accurate and catches none of the harm', 'Its precision is 99.9%'], answer: 1, why: 'Accuracy is dominated by the safe majority. Recall on the violating class is zero.' },
   },
   {
+    id: 'policy', title: 'Writing policy people can enforce', topic: 'Trust & Safety', minutes: 9, sample: true, skills: ['policy'],
+    outcomes: ['Define the harm, not just the words', 'Give reviewers examples on both sides of the line', 'Record edge cases as they come up'],
+    ideas: [
+      { id: 'p1', title: 'Name the harm first', body: ['A rule that lists banned words will be both too wide and too narrow. The same word can be a slur, a quote, or someone reclaiming it.', 'Start the policy with the harm you are preventing. Reviewers can then reason about cases the wording never anticipated.'], try: 'Rewrite one rule so its first sentence names the harm it prevents.' },
+      { id: 'p2', title: 'Show both sides of the line', body: ['Reviewers learn the boundary from examples, not definitions. One clear violation and one near miss teach more than a paragraph.', 'Pair every example with the reason it falls where it does.'], try: 'For one rule, write one example that breaks it and one that comes close but does not.' },
+      { id: 'p3', title: 'Keep an edge-case log', body: ['Disagreements between reviewers are signals, not noise. Each one marks a place where the policy is unclear.', 'Log them with the decision taken, and fold the pattern back into the guidelines.'], try: 'Find two cases from last week where reviewers disagreed and write down why.' },
+    ],
+    quiz: { q: 'Why start a policy with the harm it prevents?', options: ['It makes the document shorter', 'Reviewers can reason about cases the wording did not foresee', 'It removes the need for examples'], answer: 1, why: 'Wording can never list every case. A stated purpose lets reviewers judge new ones consistently.' },
+  },
+  {
+    id: 'triage', title: 'Triage when the queue is full', topic: 'Trust & Safety', minutes: 8, sample: true, skills: ['policy'],
+    outcomes: ['Rank by severity and reach', 'Track time to action for the worst items', 'Escalate on clear triggers'],
+    ideas: [
+      { id: 't1', title: 'Severity times reach', body: ['A severe item seen by three people and a mild item seen by a million can both be urgent. Neither number alone sets the order.', 'Score both, and let the combination decide what a reviewer opens next.'], try: 'Sort today\'s queue by severity and by views. Note which items move most.' },
+      { id: 't2', title: 'Watch the worst, not the average', body: ['Average handling time hides the cases that matter. A queue can look healthy while its most serious items wait for hours.', 'Report time to action for the highest-severity band separately.'], try: 'Calculate median time to action for your top severity band only.' },
+      { id: 't3', title: 'Write escalation triggers down', body: ['When escalation depends on judgement alone, it varies by shift and by person.', 'List the signals that always escalate, such as risk to life or a minor involved, so nobody has to decide under pressure.'], try: 'Write three triggers that should always escalate, and who receives them.' },
+    ],
+    quiz: { q: 'What is the problem with reporting only average handling time?', options: ['It is hard to calculate', 'It can hide long waits for the most severe items', 'It overstates how busy reviewers are'], answer: 1, why: 'A healthy average can coexist with slow handling of the cases that cause the most harm.' },
+  },
+  {
+    id: 'sqlts', title: 'SQL for enforcement data', topic: 'Data', minutes: 10, sample: true, skills: ['sql'],
+    outcomes: ['Count items and decisions, not raw rows', 'Measure how often appeals overturn actions', 'Find repeat behaviour over time'],
+    ideas: [
+      { id: 'q1', title: 'Count the right thing', body: ['One item can be reported many times. Counting report rows inflates volume and hides what reviewers actually decided.', 'Use COUNT(DISTINCT item_id) for items, and count decisions from the actions table.'], try: 'Compare COUNT(*) with COUNT(DISTINCT item_id) on one week of reports.' },
+      { id: 'q2', title: 'Join appeals to actions', body: ['The share of actions overturned on appeal is a quality signal. A rising rate points at a rule, a detector or a team that needs a look.', 'Left-join appeals to actions, then divide overturned appeals by actions taken.'], try: 'Calculate last month\'s overturn rate for one policy area.' },
+      { id: 'q3', title: 'Use window functions for repeat behaviour', body: ['LAG and COUNT() OVER (PARTITION BY account_id ORDER BY created_at) show how often the same account comes back.', 'This finds repeat violators without a slow self-join.'], try: 'List accounts with three or more actions inside thirty days.' },
+    ],
+    quiz: { q: 'Many reports can point at one item. How do you count items reported?', options: ['COUNT(*) on the reports table', 'COUNT(DISTINCT item_id)', 'SUM(report_id)'], answer: 1, why: 'DISTINCT collapses duplicate reports so each item counts once.' },
+  },
+  {
+    id: 'evasion', title: 'Thinking like an evader', topic: 'Trust & Safety', minutes: 8, sample: true, skills: ['ml'],
+    outcomes: ['Expect spelling tricks', 'Look at networks, not single accounts', 'Re-measure after every launch'],
+    ideas: [
+      { id: 'v1', title: 'Words get disguised', body: ['Swapped letters, extra spaces and look-alike characters exist to slip past keyword rules.', 'Normalise text before matching, and test detectors on disguised examples as well as clean ones.'], try: 'Write five disguised spellings of one blocked term and test your rule against them.' },
+      { id: 'v2', title: 'One account is rarely the story', body: ['Coordinated groups spread a task across many accounts so none looks unusual alone.', 'Shared signals such as creation time, device or posting rhythm reveal the group.'], try: 'Pick one flagged account and list three signals you could use to find its neighbours.' },
+      { id: 'v3', title: 'Launching a rule changes behaviour', body: ['Once a rule bites, people adapt. Last month\'s precision says little about next month.', 'Schedule a re-measurement after every launch instead of treating evaluation as one-off.'], try: 'Set a date to re-check one detector you shipped recently.' },
+    ],
+    quiz: { q: 'Why re-measure a detector after it launches?', options: ['Evaders adapt once a rule starts working', 'Models get slower over time', 'Precision only matters before launch'], answer: 0, why: 'Behaviour shifts in response to enforcement, so earlier evaluation goes stale.' },
+  },
+  {
     id: 'forecasting', title: 'Forecasting fundamentals', topic: 'Data', minutes: 12, sample: true, skills: ['forecasting'],
     outcomes: ['Set a baseline before building a model', 'Test on periods the model has not seen', 'Report error in units the business uses'],
     ideas: [
@@ -115,6 +155,8 @@ export const JOBS = [
 const seg = (speaker, text, kind = 'added', page) => ({ speaker, text, kind, page });
 /** Sample episodes. No recorded audio exists; playback reads these lines with the device voice. */
 export const SAMPLE_EPISODES = [
+  { id: 'ep-recall', title: 'Precision, recall and the review queue', kind: 'sample', topic: 'Trust & Safety', by: 'Sample show written for this prototype',
+    lines: [seg('A', 'Today: two numbers every detection team argues about.'), seg('B', 'Precision and recall.'), seg('A', 'Precision is how often the thing you actioned really broke the rule.'), seg('B', 'Recall is how much of the bad content you actually caught.'), seg('A', 'You rarely get both. So decide which mistake hurts more for this policy before you tune anything.'), seg('B', 'And remember the review queue: a lower-precision model is fine if people check its flags first.')] },
   { id: 'ep-baseline', title: 'Why a baseline comes first', kind: 'sample', topic: 'Data', by: 'Sample show written for this prototype',
     lines: [seg('A', 'Today, one habit that saves forecasting projects: the baseline.'), seg('B', 'Meaning the dumbest forecast that could possibly work.'), seg('A', 'Exactly. Last month, repeated. If your model cannot beat that, you have learned something useful and cheap.'), seg('B', 'And if it does beat it, you can say by how much, in units.'), seg('A', 'Which is the number a planner can act on.'), seg('B', 'So step one this week: write the baseline down before touching a model.')] },
   { id: 'ep-updates', title: 'Crafting updates people read to the end', kind: 'sample', topic: 'Communication', by: 'Sample show written for this prototype',
@@ -124,34 +166,70 @@ export const SAMPLE_EPISODES = [
 const P = (n, heading, text, o = {}) => ({ n, heading, text, flag: null, include: true, ...o });
 /** @type {Document} */
 export const SAMPLE_DOC = {
-  id: 'doc-sample', title: 'Forecasting essentials', name: 'Forecasting-essentials.pdf', size: 1843200, sample: true, extractor: 'sample', addedAt: '2026-10-10', keepText: true,
+  id: 'doc-sample', title: 'Measuring moderation', name: 'Measuring-moderation.pdf', size: 1622016, sample: true, extractor: 'sample', addedAt: '2026-10-20', keepText: true,
   pages: [
-    P(1, 'Forecasting essentials', 'A short guide for planners. This guide covers baselines, validation over time, error measures and how to explain a miss.'),
-    P(2, 'Use a baseline', 'Compare every model with a simple baseline such as last period repeated. A model earns its place only when it beats the baseline on unseen periods.', { example: 'For example, a canteen that sold 400 lunches last Monday can plan 400 for next Monday and then see if a model does better.' }),
-    P(3, 'Choosing the baseline', 'Seasonal products need a seasonal baseline: the same month last year. Fast-moving items can use a moving average of the last three periods.'),
-    P(4, 'What counts as unseen', 'Unseen periods are later than every period used in training. Random splits do not qualify because they mix future rows into the training set.'),
-    P(5, 'Respect time', 'Use chronological holdouts. Train up to a cut-off date, forecast the following months, then roll the cut-off forward and repeat.', { example: 'In monthly demand planning that means training to June, scoring July to September, then training to July and scoring August to October.' }),
-    P(6, 'Measure in units', 'Report error in the units the business orders in. Weight percentage errors by volume so small items do not dominate the result.'),
+    P(1, 'Measuring moderation', 'A short primer for trust and safety teams. It covers prevalence, precision and recall, appeals, and how to explain a change in the numbers.'),
+    P(2, 'Start with prevalence', 'Prevalence is the share of content people see that breaks a policy. It describes the user experience better than the number of items removed.', { example: 'For example, removing more posts can mean the problem grew, not that enforcement improved.' }),
+    P(3, 'Removals are not the goal', 'A rise in removals can come from more harm, better detection or a wider rule. Report removals next to prevalence so readers can tell which.'),
+    P(4, 'Precision and recall', 'Precision is the share of actions that were correct. Recall is the share of violating content that was caught. Raising one usually lowers the other.'),
+    P(5, 'Choose the error on purpose', 'Automatic removal needs high precision because mistakes reach users directly. A review queue can accept lower precision because people check each flag.', { example: 'In practice that means one threshold for auto-action and a lower one for sending items to reviewers.' }),
+    P(6, 'Appeals as a quality signal', 'The share of actions overturned on appeal shows where rules or detectors are unclear. Track it by policy area, not only in total.'),
     P(7, '', '', { flag: 'scanned', include: false }),
-    P(8, 'Error by item class', 'Class A 12 9 14 11 Class B 21 18 25 19 Class C 44 39 51 47 Total 19 16 22 18', { flag: 'table', include: false }),
-    P(9, 'Explain the misses', 'Sort errors from largest to smallest and read the top ten. Most large misses have a cause that can be named: a promotion, a stock-out or a new customer.'),
-    P(10, 'Bias', 'A forecast that is always high or always low is biased. Bias is easier to fix than noise because it points in one direction.'),
-    P(11, 'A review routine', 'Each month, compare forecast with actuals, record the largest misses with a cause, and adjust one assumption at a time.'),
-    P(12, 'References', 'Further reading and data sources.', { include: false }),
+    P(8, 'Overturn rate by policy area', 'Spam 3 4 3 5 Harassment 11 9 12 10 Misinformation 18 21 17 19 Total 9 9 8 9', { flag: 'table', include: false }),
+    P(9, 'Explaining a change', 'When a number moves, check three things first: a policy change, a detector change and a change in the traffic itself.'),
+    P(10, 'Reviewer agreement', 'If reviewers disagree on the same item, the policy is unclear. Agreement rates point at the guidelines that need examples.'),
+    P(11, 'A monthly routine', 'Each month, compare prevalence with removals, read the most overturned decisions, and change one thing at a time.'),
+    P(12, 'References', 'Further reading.', { include: false }),
   ],
 };
 
-export const P2P_DEFAULTS = { format: 'duo', treatment: 'detailed', language: 'en', minutes: 10, voiceA: '', voiceB: '', focus: ['Key ideas', 'Examples'], note: '' };
+export const P2P_DEFAULTS = { format: 'duo', treatment: 'detailed', language: 'en', minutes: 10, voiceA: 'af_heart', voiceB: 'am_michael', focus: ['Key ideas', 'Examples'], note: '' };
 export const P2P_LIMITS = { mb: 25, pages: 200 };
-export const STAGES = ['Checking the approved script', 'Rendering voices', 'Timing the transcript', 'Saving the episode'];
+export const STAGES = ['Loading the voice', 'Rendering voices', 'Timing the transcript', 'Saving the episode'];
 
 /** Integration boundaries. Each entry says what runs today and what a live build needs. */
 export const PROVIDERS = [
-  ['Accounts', 'Demo: any valid email signs in on this device.', 'Auth service with email reset.'],
-  ['PDF text extraction', 'Live in the browser with pdf.js. The file is never uploaded.', 'Server extraction for large files.'],
+  ['Accounts', 'Demo sign-in on this device. Sync uses a private code instead of a password.', 'Auth service with email reset.'],
+  ['PDF text extraction', 'Live in the browser with pdf.js. The file is never uploaded.', 'Server extraction for very large files.'],
   ['OCR for scanned pages', 'Not connected. Pages can be typed in or excluded.', 'OCR provider behind the server.'],
-  ['Script writing', 'Demo template: quotes sentences from your pages. No language model.', 'LLM endpoint, key kept server-side.'],
-  ['Voice rendering', 'Demo: your device voice reads the script. No audio file is produced.', 'Text-to-speech provider, job queue, file storage.'],
-  ['Job listings', 'Three sample listings.', 'Listings API with source and posting date.'],
+  ['Script writing', 'Template that quotes sentences from your pages. No language model, by decision.', 'Optional LLM step, key kept server-side.'],
+  ['Voice rendering', 'Live on the device: Kokoro-82M via kokoro-js, about 90 MB downloaded once.', 'Server rendering for slow phones.'],
+  ['Job listings', 'Live from MyCareersFuture through /api/jobs, plus four samples.', 'More sources and saved searches.'],
+  ['Sync', 'Live: AES-GCM encrypted on the device, stored in a private Vercel Blob store through /api/sync.', 'Accounts with recovery.'],
   ['Resume reading', 'PDF read in the browser; skill keywords suggested, you confirm each. DOCX not read.', 'Server parser for DOCX and scanned resumes.'],
 ];
+
+/** Short skill checks. Passing records "Passed skill check": a recall-level check written for the prototype, not a certification. */
+export const CHECK_PASS = 3;
+export const CHECKS = {
+  sql: [
+    { q: 'Which clause filters rows after GROUP BY has aggregated them?', options: ['WHERE', 'HAVING', 'ORDER BY'], answer: 1 },
+    { q: 'A LEFT JOIN from actions to appeals returns what for actions with no appeal?', options: ['Nothing; those actions are dropped', 'The action, with NULL appeal columns', 'An error'], answer: 1 },
+    { q: 'What does COUNT(DISTINCT item_id) count?', options: ['Every row', 'Each item once, however many rows mention it', 'Only items with no duplicates'], answer: 1 },
+    { q: 'Which gives a running count per account without a self-join?', options: ['COUNT(*) OVER (PARTITION BY account_id ORDER BY created_at)', 'GROUP BY created_at', 'SELECT DISTINCT account_id'], answer: 0 },
+  ],
+  python: [
+    { q: 'In pandas, what does df.groupby("policy")["item_id"].nunique() return?', options: ['The number of rows per policy', 'The number of distinct items per policy', 'The first item per policy'], answer: 1 },
+    { q: 'Which is a list comprehension?', options: ['[x * 2 for x in values]', '{x: 2}', 'lambda x: x * 2'], answer: 0 },
+    { q: 'What does "with open(path) as f:" make sure of?', options: ['The file is closed when the block ends', 'The file is read faster', 'The file is created if missing'], answer: 0 },
+    { q: 'df[df["score"] > 0.9] returns what?', options: ['A boolean', 'Rows where score is above 0.9', 'The column named score'], answer: 1 },
+  ],
+  ml: [
+    { q: 'A detector flags 100 items and 80 truly violate policy. What is its precision?', options: ['20%', '80%', 'It cannot be known'], answer: 1 },
+    { q: 'Raising a classifier\'s decision threshold usually does what?', options: ['Raises precision and lowers recall', 'Raises both', 'Lowers both'], answer: 0 },
+    { q: 'Why is accuracy misleading when violations are rare?', options: ['A model that flags nothing scores highly', 'Accuracy ignores the safe majority', 'Accuracy needs labelled data'], answer: 0 },
+    { q: 'Why evaluate on data from after the training period?', options: ['It is faster', 'Behaviour changes, and the model must work on new content', 'Older data has no labels'], answer: 1 },
+  ],
+  policy: [
+    { q: 'What should a policy state first?', options: ['A list of banned words', 'The harm it prevents', 'The penalty'], answer: 1 },
+    { q: 'Reviewers keep disagreeing on one kind of case. What does that suggest?', options: ['Reviewers need replacing', 'The policy is unclear there and needs examples', 'The case should be ignored'], answer: 1 },
+    { q: 'Which measure best reflects what users actually see?', options: ['Number of removals', 'Prevalence of violating content', 'Number of reports'], answer: 1 },
+    { q: 'What is a rising appeal-overturn rate a sign of?', options: ['Users appealing too often', 'Possible problems with a rule or detector', 'Better enforcement'], answer: 1 },
+  ],
+  communication: [
+    { q: 'What belongs in the first line of an update to a busy manager?', options: ['How the data was cleaned', 'The decision or recommendation', 'Every metric you tracked'], answer: 1 },
+    { q: 'Why show one concrete example before an aggregate?', options: ['It is easier to picture', 'It hides the total', 'It replaces the data'], answer: 0 },
+    { q: 'What is the better way to state uncertainty?', options: ['"Probably"', 'A range, such as 40 to 60', 'Leaving it out'], answer: 1 },
+    { q: 'A policy team asks why removals rose. What do you check first?', options: ['Policy, detector and traffic changes', 'Reviewer headcount only', 'Nothing; more removals is good'], answer: 0 },
+  ],
+};

@@ -2,7 +2,7 @@
 import { esc, icon, btn, link, icbtn, chip, seg, tag, notice, demo, row, tile, bar, field, toggle, top, title, head, sec, empty, act, go, fmt, mins, kb, day } from './ui.js';
 import { SAMPLE_EPISODES, SAMPLE_DOC, P2P_DEFAULTS, P2P_LIMITS, STAGES, JOBS } from './data.js';
 import { episode, course, why, job } from './store.js';
-import { P2P_ERRORS, scriptStats, buildScript } from './services.js';
+import { P2P_ERRORS, scriptStats, buildScript, VOICES } from './services.js';
 import { epRow, p2pBand } from './s-learn.js';
 
 const RATES = [0.8, 1, 1.25, 1.5, 2];
@@ -11,7 +11,7 @@ const docOf = (s, id) => s.docs.find((d) => d.id === (id || p2p(s).docId)) || s.
 const scriptOf = (s, id) => s.scripts.find((x) => x.id === (id || p2p(s).scriptId)) || s.scripts.at(-1);
 const curJob = (s) => s.jobs.find((j) => j.scriptId === p2p(s).scriptId) || s.jobs.at(-1);
 const art = (e, sm, md) => `<div class="art ${sm ? 'sm' : ''} ${md ? 'md' : ''} ${e.kind === 'generated' ? '' : 'pub'}" ${sm ? 'aria-hidden="true"' : 'role="img" aria-label="Episode artwork"'}>${sm ? icon(e.kind === 'generated' ? 'file' : 'mic', 20) : `<span class="k">${e.kind === 'generated' ? `From your PDF · ${e.format === 'duo' ? 'Two hosts' : 'Solo'}` : e.kind === 'course' ? 'Course audio' : 'Sample episode'}</span><span class="t">${esc(e.title)}</span>`}</div>`;
-const voiceNote = (ctx) => ctx.env.tts ? 'Playback is your device voice reading the text aloud. No audio file exists.' : 'This browser has no speech voice, so playback is a silent timer over the transcript.';
+const voiceNote = (ctx, e) => e && e.audio ? 'Real audio, rendered on the device that made it with an open-source voice (Kokoro).' : ctx.env.tts ? 'Playback is your device voice reading the text aloud. No audio file exists.' : 'This browser has no speech voice, so playback is a silent timer over the transcript.';
 const stepTop = (n, back, t) => top({ back, title: `PDF to podcast · ${n} of 5`, step: [n, 5], right: icbtn('x', 'Close and keep draft', { go: 'stash' }) });
 const srcTag = (sg, docId) => sg.kind === 'source' ? `<button type="button" class="pglink" ${go(`p2p-source?doc=${docId || ''}&p=${sg.page}`)} aria-label="From the PDF, open page ${sg.page}"><span class="tag src">From PDF · p. ${sg.page}</span></button>` : tag('Added by Stash', 'added');
 
@@ -35,7 +35,7 @@ export function sheets(ctx) {
     return wrap('Up next and sleep timer', `<section>${q.length ? `<div class="list">${q.map((e) => row({ lead: art(e, true), title: e.title, sub: mins(e.duration), trail: icbtn('x', 'Remove from queue', { act: 'queue-del', arg: e.id }) })).join('')}</div>` : `<p class="sub">Nothing queued. Add episodes from their page.</p>`}</section>
       <section><p class="label">Stop playing after</p><div class="chips" style="margin-top:8px" role="group" aria-label="Sleep timer">${[['0', 'Off'], ['5', '5 min'], ['15', '15 min'], ['30', '30 min'], ['end', 'This episode']].map(([v, l]) => chip(l, { on: String(P.sleep?.v ?? '0') === v, act: 'sleep', arg: v })).join('')}</div></section>`);
   }
-  if (name === 'ep') { const e = episode(s, arg); return wrap(e.title, `<div class="list">${row({ title: 'Add to queue', act: 'queue-add', arg: e.id, noChev: true })}${row({ title: 'Download transcript (.txt)', act: 'dl', arg: e.id + '|txt', noChev: true })}${row({ title: 'Download captions (.vtt)', act: 'dl', arg: e.id + '|vtt', noChev: true })}${row({ title: 'Download audio', sub: 'Unavailable: no audio file exists in demo mode', trail: tag('Demo', 'none') })}${e.kind === 'generated' ? row({ title: 'Regenerate with new settings', go: 'p2p-config' }) + row({ title: 'Delete episode', act: 'sheet', arg: 'del:' + e.id, noChev: true }) : ''}</div>`); }
+  if (name === 'ep') { const e = episode(s, arg); return wrap(e.title, `<div class="list">${row({ title: 'Add to queue', act: 'queue-add', arg: e.id, noChev: true })}${row({ title: 'Download transcript (.txt)', act: 'dl', arg: e.id + '|txt', noChev: true })}${row({ title: 'Download captions (.vtt)', act: 'dl', arg: e.id + '|vtt', noChev: true })}${e.audio ? row({ title: 'Download audio (.wav)', act: 'dl-audio', arg: e.id, noChev: true }) : row({ title: 'Download audio', sub: e.kind === 'generated' ? 'Made with the device voice, so there is no file. Regenerate to render audio.' : 'Sample episodes have no recording', trail: tag('No file', 'none') })}${e.kind === 'generated' ? row({ title: 'Regenerate with new settings', go: 'p2p-config' }) + row({ title: 'Delete episode', act: 'sheet', arg: 'del:' + e.id, noChev: true }) : ''}</div>`); }
   if (name === 'del') { const e = episode(s, arg); return wrap('Delete this episode?', `<p>"${esc(e.title)}" and its transcript will be removed from this device. The script and extracted text stay, so you can generate it again.</p>${btn('Delete episode', { kind: 'danger', act: 'ep-del', arg: e.id })}${btn('Keep it', { kind: 'secondary', act: 'sheet-close' })}`); }
   if (name === 'wipe') return wrap('Delete all data?', `<p>This removes your profile, progress, evidence, imports, scripts and episodes from this browser. It cannot be undone.</p>${btn('Export first', { kind: 'secondary', go: 'export' })}${btn('Delete everything', { kind: 'danger', act: 'wipe' })}`);
   if (name === 'cancel') return wrap('Cancel generation?', `<p>The job stops. Your script and page selection are kept, and you can start again later with the same job key.</p>${btn('Cancel generation', { kind: 'danger', act: 'job-cancel' })}${btn('Keep going', { kind: 'secondary', act: 'sheet-close' })}`);
@@ -56,7 +56,7 @@ function playerView(ctx) {
         <button type="button" ${act('sheet', 'queue')} aria-label="Queue, ${P.queue.length} waiting"><b>${icon('list', 20)}</b>Queue ${P.queue.length || ''}</button>
         <button type="button" ${go('transcript')}><b>${icon('text', 20)}</b>Transcript</button>
       </div>
-      <p class="cap center">${voiceNote(ctx)}</p>`,
+      <p class="cap center">${voiceNote(ctx, e)}</p>`,
   };
 }
 
@@ -66,10 +66,11 @@ function episodeView(ctx, id) {
   return {
     top: top({ back: gen ? 'stash' : 'podcasts', right: `${icbtn('stash', on ? 'Remove from My Stash' : 'Save to My Stash', { act: 'save', arg: key, on, pressed: on })}${icbtn('more', 'More actions', { act: 'sheet', arg: 'ep:' + e.id })}` }),
     body: `<div style="display:flex;gap:16px;align-items:flex-end">${art(e, false, true)}<div class="stack-s"><div class="tags">${gen ? tag('Generated', 'src') : tag('Sample', 'sample')}</div><h1 class="h2" tabindex="-1">${esc(e.title)}</h1><p class="sub">${mins(e.duration)} · ${e.segments.length} lines${gen ? ` · ${e.format === 'duo' ? 'two hosts' : 'solo'}` : ''}</p></div></div>
-      ${gen ? demo('No audio file was rendered. ' + voiceNote(ctx)) : `<p class="sub">${esc(e.by)}. ${voiceNote(ctx)}</p>`}
+      ${gen ? (e.audio ? notice(`<span>${voiceNote(ctx, e)} ${e.audioLocal === false ? 'This device does not have the file; playback falls back to the device voice.' : ''}</span>`, { title: 'Audio on this device', icon: 'headphones' }) : demo('No audio file was rendered. ' + voiceNote(ctx, e))) : `<p class="sub">${esc(e.by)}. ${voiceNote(ctx, e)}</p>`}
       ${gen ? `<div class="list">
         ${row({ lead: tile('text'), title: 'Transcript with timestamps', sub: `${e.segments.filter((x) => x.kind === 'source').length} lines from the PDF, ${e.segments.filter((x) => x.kind === 'added').length} added`, go: 'transcript?id=' + e.id })}
         ${row({ lead: tile('file'), title: 'Source pages', sub: doc ? `${doc.name} · ${doc.pages.filter((p) => p.include).length} of ${doc.pages.length} pages used` : 'Extracted text was not kept', go: doc ? `p2p-source?doc=${doc.id}&p=${(e.segments.find((x) => x.page) || {}).page || 1}` : null })}
+        ${e.audio ? row({ lead: tile('download'), title: 'Download audio', sub: `.wav · ${mins(e.duration)}`, act: 'dl-audio', arg: e.id, noChev: true }) : ''}
         ${row({ lead: tile('download'), title: 'Download transcript', sub: '.txt with page references', act: 'dl', arg: e.id + '|txt', noChev: true })}
         ${row({ lead: tile('refresh'), title: 'Regenerate', sub: 'Change format, length or voices', go: 'p2p-config' })}
         ${row({ lead: tile('trash'), title: 'Delete episode', act: 'sheet', arg: 'del:' + e.id, noChev: true })}
@@ -161,7 +162,7 @@ export default {
     render: (ctx) => {
       const s = ctx.s, c = { ...P2P_DEFAULTS, ...(p2p(s).cfg || {}) }, doc = docOf(s);
       const est = mins(scriptStats(buildScript(doc, c)).seconds);
-      const vo = [['', 'Device default'], ...ctx.env.voices.map((v) => [v.name, `${v.name} (${v.lang})`])];
+      const vo = VOICES;
       return {
         top: stepTop(3, 'p2p-review'),
         body: `${title('Shape the episode')}
@@ -169,9 +170,9 @@ export default {
           <div><p class="label">Treatment</p><div style="margin-top:6px">${seg('Treatment', [['summary', 'Summary'], ['detailed', 'Detailed']], c.treatment, 'set', 'draft.p2p.cfg.treatment=')}</div><p class="cap" style="margin-top:6px">About ${est} from your selected pages.</p></div>
           <div><p class="label">Learning focus</p><div class="chips" style="margin-top:6px" role="group" aria-label="Learning focus">${['Key ideas', 'Examples', 'Definitions', 'Exam revision'].map((f) => chip(f, { on: c.focus.includes(f), tick: true, act: 'toggle-in', arg: 'draft.p2p.cfg.focus|' + f })).join('')}</div></div>
           ${field({ label: 'Language', bind: 'draft.p2p.cfg.language', type: 'select', value: c.language, options: [['en', 'English'], ['id', 'Bahasa Indonesia (needs a translation provider)', 1], ['zh', 'Chinese (needs a translation provider)', 1]] })}
-          ${field({ label: c.format === 'duo' ? 'Host A voice' : 'Narrator voice', bind: 'draft.p2p.cfg.voiceA', type: 'select', value: c.voiceA, options: vo })}
-          ${c.format === 'duo' ? field({ label: 'Host B voice', bind: 'draft.p2p.cfg.voiceB', type: 'select', value: c.voiceB, options: vo, hint: ctx.env.voices.length < 2 ? 'This device offers one voice, so both hosts will sound alike.' : 'Voices come from this device. No real person is imitated.' }) : ''}
-          <div class="card"><p class="eyebrow">Estimate</p><dl class="kv" style="margin-top:10px"><dt>Script</dt><dd>Instant (template)</dd><dt>Audio</dt><dd>About 10 s, simulated</dd><dt>Cost</dt><dd>None in demo mode</dd></dl><p class="cap" style="margin-top:10px">Live voice providers price by character. You would see the quote here before approving.</p></div>`,
+          ${field({ label: c.format === 'duo' ? 'Host A voice' : 'Narrator voice', bind: 'draft.p2p.cfg.voiceA', type: 'select', value: c.voiceA || 'af_heart', options: vo })}
+          ${c.format === 'duo' ? field({ label: 'Host B voice', bind: 'draft.p2p.cfg.voiceB', type: 'select', value: c.voiceB || 'am_michael', options: vo, hint: 'Open-source synthetic voices. No real person is imitated.' }) : ''}
+          <div class="card"><p class="eyebrow">Estimate</p><dl class="kv" style="margin-top:10px"><dt>Episode length</dt><dd>${est}</dd><dt>Script</dt><dd>Instant (template)</dd><dt>Audio</dt><dd>Made on this device</dd><dt>Cost</dt><dd>Free</dd></dl><p class="cap" style="margin-top:10px">The first time, Stash downloads a 90 MB voice model and keeps it for next time. Rendering takes roughly one to four minutes per minute of audio, depending on the device. You can keep using Stash meanwhile.</p></div>`,
         foot: btn('Draft the script', { act: 'p2p-script' }),
       };
     },
@@ -203,16 +204,16 @@ export default {
     title: 'PDF: generate', chrome: 'task',
     note: 'Step 5. Named stages, a labelled progress bar, the job key and attempt count. The person can leave: the job is stored and resumes. Cancel asks first. Approving the same script twice reuses the job, so there is never a duplicate episode or charge.',
     render: (ctx) => {
-      const s = ctx.s, j = ctx.q.state === 'running' ? { key: '7f3a91c2', status: 'running', stage: 1, progress: 0.46, attempts: 1 } : curJob(s);
+      const s = ctx.s, j = ctx.q.state === 'running' ? { key: '7f3a91c2', status: 'running', stage: 1, progress: 0.46, attempts: 1, line: 12, lines: 26 } : curJob(s);
       if (!j) return { top: stepTop(5, 'p2p-script'), body: empty({ icon: 'headphones', title: 'Nothing is being generated', body: 'Approve a script to start.', actions: btn('Open script', { go: 'p2p-script' }) }) };
       const done = j.status === 'done', run = j.status === 'running';
       return {
         top: stepTop(5, 'p2p-script'),
         body: `${title(done ? 'Episode ready' : run ? 'Making your episode' : j.status === 'cancelled' ? 'Generation cancelled' : 'Generation stopped')}
-          ${bar(j.progress, 'Generation progress')}<p class="sub" aria-live="polite" data-p="jobpct">${Math.round(j.progress * 100)}%${run ? ' · about ' + Math.max(1, Math.round((1 - j.progress) * 10)) + ' s left' : ''}</p>
-          <ol class="stages">${STAGES.map((t, n) => `<li class="${n < j.stage || done ? 'done' : n === j.stage && run ? 'now' : n === j.stage && j.status === 'failed' ? 'bad' : ''}"><span class="dot">${n < j.stage || done ? icon('check', 16) : n === j.stage && j.status === 'failed' ? icon('x', 16) : ''}</span>${t}${n === 1 ? ' <span class="cap">(simulated)</span>' : ''}</li>`).join('')}</ol>
-          <dl class="kv"><dt>Job key</dt><dd>${esc(j.key)}</dd><dt>Attempt</dt><dd>${j.attempts}</dd><dt>Charge</dt><dd>None (demo)</dd></dl>
-          ${done ? demo('The progress above was a simulated job. No audio file was rendered. Playback uses your device voice reading the approved script.')
+          ${bar(j.progress, 'Generation progress')}<p class="sub" aria-live="polite" data-p="jobpct">${Math.round(j.progress * 100)}%${run && j.stage === 0 && j.dl ? ` · downloading the voice, ${Math.round(j.dl * 100)}%` : run && j.stage === 1 && j.lines ? ` · line ${j.line || 0} of ${j.lines}` : ''}</p>
+          <ol class="stages">${STAGES.map((t, n) => `<li class="${n < j.stage || done ? 'done' : n === j.stage && run ? 'now' : n === j.stage && j.status === 'failed' ? 'bad' : ''}"><span class="dot">${n < j.stage || done ? icon('check', 16) : n === j.stage && j.status === 'failed' ? icon('x', 16) : ''}</span>${t}</li>`).join('')}</ol>
+          <dl class="kv"><dt>Job key</dt><dd>${esc(j.key)}</dd><dt>Attempt</dt><dd>${j.attempts}</dd><dt>Cost</dt><dd>Free, made on this device</dd></dl>
+          ${done ? (s.episodes.find((e) => e.id === j.episodeId)?.audio ? notice('<span>Real audio was rendered on this device with an open-source voice. Download it from the episode page.</span>', { title: 'Audio ready', icon: 'check' }) : demo('This episode uses the device voice reading the approved script. No audio file was rendered.'))
           : run ? notice('<span>You can leave this screen. The job is saved and carries on while Stash is open, and resumes when you come back.</span>')
           : j.status === 'cancelled' ? notice('<span>Your script and pages are kept. Starting again reuses the same job key.</span>') : ''}`,
         foot: done ? `${btn('Open episode', { go: 'p2p-episode?id=' + j.episodeId })}${btn('Back to My Stash', { kind: 'ghost', go: 'stash' })}`
@@ -229,13 +230,13 @@ export default {
       const s = ctx.s, j = s.jobs.find((x) => x.status === 'failed') || { key: '7f3a91c2', stage: 1, progress: 0.62, attempts: 1 };
       return {
         top: top({ close: 'stash', title: 'PDF to podcast' }),
-        body: `<div class="empty" style="padding-top:28px"><span class="ring">${icon('alert', 30)}</span><h1 class="h1" tabindex="-1">Voice rendering stopped</h1><p class="sub">It failed at ${Math.round(j.progress * 100)}%, during "${STAGES[j.stage]}". This was a simulated failure for testing.</p></div>
+        body: `<div class="empty" style="padding-top:28px"><span class="ring">${icon('alert', 30)}</span><h1 class="h1" tabindex="-1">Voice rendering stopped</h1><p class="sub">It stopped at ${Math.round(j.progress * 100)}%, during "${STAGES[j.stage]}". ${j.error === 'sim' || !j.error ? 'This was a simulated failure for testing.' : `Reason: ${esc(j.error)}`}</p></div>
           <div class="list">
             ${row({ lead: tile('check'), title: 'Your script is saved', sub: 'Edits, emphasis and pronunciations are intact' })}
             ${row({ lead: tile('check'), title: 'Your page selection is saved', sub: 'No need to read the PDF again' })}
-            ${row({ lead: tile('check'), title: 'No charge for the failed attempt', sub: `Retry reuses job key ${j.key}, attempt ${j.attempts + 1}` })}
+            ${row({ lead: tile('check'), title: 'Nothing is lost by retrying', sub: `Retry reuses job key ${j.key}, attempt ${j.attempts + 1}` })}
           </div>`,
-        foot: `${btn('Retry generation', { icon: 'refresh', act: 'job-retry' })}${btn('Edit script first', { kind: 'secondary', go: 'p2p-script' })}${btn('Back to My Stash', { kind: 'ghost', go: 'stash' })}`,
+        foot: `${btn('Retry generation', { icon: 'refresh', act: 'job-retry' })}${btn('Use the device voice instead', { kind: 'secondary', act: 'job-fallback' })}${btn('Edit script first', { kind: 'ghost', go: 'p2p-script' })}${btn('Back to My Stash', { kind: 'ghost', go: 'stash' })}`,
       };
     },
   },
