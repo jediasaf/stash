@@ -31,7 +31,7 @@ export default {
       const f = d(ctx, 'signin'), e = ctx.ui.errs || {}, isNew = ctx.q.new;
       if (isNew) return {
         top: top({ back: 'welcome' }),
-        body: `${title('Create your account')}
+        body: `${title('Create your account', 'Stash a skill a day.')}
           <form class="stack" data-submit="signin" novalidate>
           ${field({ label: 'First name', bind: 'profile.name', value: ctx.s.profile.name, attrs: 'autocomplete="given-name"', hint: 'Optional. Used in greetings.' })}
           ${field({ label: 'Email', bind: 'draft.signin.email', type: 'email', value: f.email, placeholder: 'you@example.com', err: e.email, attrs: 'autocomplete="email" inputmode="email"' })}
@@ -43,7 +43,7 @@ export default {
       };
       return {
         top: top({ back: 'welcome' }),
-        body: `${title('Welcome back')}
+        body: `${title('Welcome back', 'Stash a skill a day.')}
           <form class="stack" data-submit="signin" novalidate>
           ${field({ label: 'Email', bind: 'draft.signin.email', type: 'email', value: f.email, placeholder: 'you@example.com', err: e.email, attrs: 'autocomplete="email" inputmode="email"' })}
           ${field({ label: 'Password', bind: 'draft.signin.pw', type: f.show ? 'text' : 'password', value: f.pw, err: e.pw, hint: '8 characters or more', attrs: 'autocomplete="current-password"', wrap: (c) => `<div class="pw">${c}<button type="button" ${act('toggle', 'draft.signin.show')} aria-pressed="${!!f.show}">${f.show ? 'Hide' : 'Show'}</button></div>` })}

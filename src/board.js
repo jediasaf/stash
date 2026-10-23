@@ -41,7 +41,7 @@ const AUDIT = [
 ];
 
 const page = (inner) => `<section class="page">${inner}</section>`;
-const cover = () => page(`<div class="b-over"><span>Stash / mobile learning app</span><span>${FI[0]} / ${FI[1]}</span></div>
+const cover = () => page(`<div class="b-over"><span>Stash / Stash a skill a day.</span><span>${FI[0]} / ${FI[1]}</span></div>
   <h1 class="c-title" id="cover">${FI[1]}</h1><p class="c-lead">${ORDER.length} screens on ${BOARDS.length} boards. ${FI[2]}</p>
   <div class="c-map">${[['Start', [0, 1]], ['Learn', [2, 3]], ['Keep', [4, 5]], ['Grow', [6, 7]], ['Listen, convert', [8, 9]], ['Generate, manage', [10, 11]], ['Prove, keep', [12]]].map(([k, bs]) => `<div class="r"><span class="k">${k}</span>${bs.flatMap((b) => { const ids = BOARDS[b][2]; return [[ids[0], ids[1]], [ids[2], ids[3]]].map((pair) => `<a href="#b-${b}"><b>${pair.map((i) => SCREENS[i].title).join(' · ')}</b><span>Board ${b + 1} · screens ${num(pair[0])} and ${num(pair[1])}</span></a>`); }).join('')}</div>`).join('')}</div>
   <div class="c-how"><p><b>How to read this.</b> Each board shows four phones in journey order with a design note under each. An arrow between two phones names the control that links them. ${fi === 'lofi' ? 'This sheet is for layout and flow only; links are added in the interactive wireframe.' : 'Buttons, rows and tabs inside the phones are links: they jump to the screen they open. Typing, playback and file picking need the clickable prototype.'} A "continues" tag means the screen scrolls.</p>

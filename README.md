@@ -1,5 +1,7 @@
 # Stash
 
+**Stash a skill a day.**
+
 Mobile learning app prototype: short lessons, PDF-to-podcast, and a career view that compares a target role with evidence the learner has recorded.
 
 This is a design prototype with real local behaviour. It is not a production app. Everything that needs a server is labelled "Demo mode" or "Not connected" on screen.
