@@ -14,7 +14,7 @@ export default {
     render: () => ({
       body: `<div style="padding-top:24px" class="stack">
         <p class="h2" style="color:var(--emerald)" aria-label="Stash">stash</p>
-        ${title('Short lessons. Shortest path to your next role')}
+        ${title('Stash a skill a day.')}
         <div class="list plain" style="margin-top:28px">
           ${row({ lead: tile('book'), title: 'Learn in five-minute ideas', sub: 'Read or listen, then try one thing.' })}
           ${row({ lead: tile('headphones'), title: 'Turn a PDF into a podcast', sub: 'Solo narration or a two-host conversation.' })}
