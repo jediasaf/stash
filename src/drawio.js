@@ -22,6 +22,11 @@ export function toDrawio() {
       const r = el.getBoundingClientRect(); if (!r.width || !r.height) { if (cs.display !== 'contents') return; }
       if (clip && (r.top >= clip.bottom - 2 || r.bottom <= clip.top + 1)) return;
       const g = { x: r.left - ox, y: r.top - oy, w: r.width, h: clip ? Math.min(r.bottom, clip.bottom) - r.top : r.height };
+      if (el.tagName === 'IMG' && el.complete && el.naturalWidth) {
+        const cv = document.createElement('canvas'); cv.width = Math.round(r.width * 2); cv.height = Math.round(r.height * 2);
+        const cx = cv.getContext('2d'); if (getComputedStyle(el).filter.includes('grayscale')) cx.filter = 'grayscale(1)'; cx.drawImage(el, 0, 0, cv.width, cv.height);
+        add(`shape=image;html=1;imageAspect=0;image=data:image/png,${cv.toDataURL('image/png').split(',')[1]};`, g, { parent }); return;
+      }
       if (el.tagName === 'svg') {
         const c = rgb(cs.color) || '#000000'; const s = el.outerHTML.replace(/currentColor/g, c).replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"').replace(/ class="[^"]*"/, '').replace(/ aria-hidden="true"/, '');
         add(`shape=image;html=1;imageAspect=1;aspect=fixed;image=data:image/svg+xml,${btoa(s)};`, g, { parent }); return;
