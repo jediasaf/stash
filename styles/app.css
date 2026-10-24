@@ -334,3 +334,11 @@ div.row { cursor: default; }
 [data-fi="midfi"] .bar.multi i.project, [data-fi="midfi"] .bar.multi i.assessed { background: #2E3138; } [data-fi="midfi"] .bar.multi i.learning { background: #8B8E96; } [data-fi="midfi"] .bar.multi i.self { background: #C8C8CE; }
 [data-fi="midfi"] .tabs { border-top: 0; }
 [data-fi="midfi"] .mini { background: #F3F3F5; border-color: #F3F3F5; }
+
+/* ---------- lo-fi: text drawn as grey bars ("greeking"), so the sketch shows layout, not copy ---------- */
+[data-fi="lofi"] .app *:not(svg):not(svg *) { color: transparent !important; text-decoration: line-through 0.48em #A9A9A9 !important; text-decoration-skip-ink: none !important; }
+[data-fi="lofi"] .app :is(h1, h2, h3, .h1, .h2, .h3, b, strong, .btn, .eyebrow, .tabs button[aria-current] span) { text-decoration-color: #6B6B6B !important; }
+[data-fi="lofi"] .app svg { color: #4A4A4A !important; }
+[data-fi="lofi"] .app input, [data-fi="lofi"] .app textarea, [data-fi="lofi"] .app select { color: transparent !important; text-decoration: none !important; }
+[data-fi="lofi"] .app ::placeholder { color: transparent !important; }
+[data-fi="lofi"] .app .hero-ph { font-size: 13px; }

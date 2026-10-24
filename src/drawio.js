@@ -5,6 +5,7 @@ const rgb = (c) => { const m = c.match(/[\d.]+/g); if (!m) return null; const [r
 const R = (n) => Math.round(n * 10) / 10;
 
 export function toDrawio() {
+  const BARS = document.body.dataset.fi === 'lofi';
   const HIFI = document.body.dataset.hifi === '1', MID = document.body.dataset.fi === 'midfi' || HIFI;
   const FRAME = HIFI ? '#030404' : '#8FBBE8';
   const FONT = HIFI ? 'fontFamily=Nunito Sans;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DNunito%2BSans;' : MID ? 'fontFamily=Lato;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DLato;' : 'fontFamily=Helvetica;';
@@ -65,8 +66,10 @@ export function toDrawio() {
       else if (el.matches('input[type=checkbox], input[type=radio]')) { add(`${el.type === 'radio' ? 'ellipse;' : 'rounded=0;'}html=1;fillColor=${el.checked ? '#DAE8FC' : '#FFFFFF'};strokeColor=#000000;fontSize=${R(13 * k)};`, g, { parent, value: el.checked ? (el.type === 'radio' ? '●' : '✓') : '' }); return; }
       else if (el.type === 'range') { add('rounded=0;html=1;fillColor=#B3B3B3;strokeColor=none;', { x: g.x, y: g.y + g.h / 2 - 1.5, w: g.w, h: 3 }, { parent }); const f = (el.value - el.min) / (el.max - el.min || 1); add('ellipse;html=1;fillColor=#6C8EBF;strokeColor=#000000;', { x: g.x + g.w * f - 6, y: g.y + g.h / 2 - 6, w: 12, h: 12 }, { parent }); return; }
       else if (field) {
-        const v = el.tagName === 'SELECT' ? (el.selectedOptions[0]?.textContent || '') + '  ▾' : el.value || el.placeholder || '';
-        add(`rounded=0;whiteSpace=wrap;html=1;fillColor=${bg || '#FFFFFF'};strokeColor=${bc || '#000000'};${dashed}align=left;verticalAlign=${el.tagName === 'TEXTAREA' ? 'top' : 'middle'};spacingLeft=${R(parseFloat(cs.paddingLeft) * k)};spacingTop=${el.tagName === 'TEXTAREA' ? R(parseFloat(cs.paddingTop) * k) : 0};fontSize=${R(parseFloat(cs.fontSize) * k)};${FONT}fontColor=${el.value ? '#000000' : '#666666'};`, g, { parent, value: X(v) }); return;
+        const v = BARS ? (el.tagName === 'SELECT' ? '▾' : '') : el.tagName === 'SELECT' ? (el.selectedOptions[0]?.textContent || '') + '  ▾' : el.value || el.placeholder || '';
+        add(`rounded=0;whiteSpace=wrap;html=1;fillColor=${bg || '#FFFFFF'};strokeColor=${bc || '#000000'};${dashed}align=left;verticalAlign=${el.tagName === 'TEXTAREA' ? 'top' : 'middle'};spacingLeft=${R(parseFloat(cs.paddingLeft) * k)};spacingTop=${el.tagName === 'TEXTAREA' ? R(parseFloat(cs.paddingTop) * k) : 0};fontSize=${R(parseFloat(cs.fontSize) * k)};${FONT}fontColor=${el.value ? '#000000' : '#666666'};`, g, { parent, value: X(v) });
+        if (BARS && (el.value || el.placeholder) && el.tagName !== 'SELECT') add('rounded=1;arcSize=50;html=1;fillColor=#A9A9A9;strokeColor=none;', { x: g.x + 10 * k, y: g.y + g.h / 2 - 3.5, w: Math.min(g.w * 0.45, 140), h: 7 }, { parent });
+        return;
       } else if (bw.every((w) => w > 0) && bc) add(`${round ? 'ellipse;' : 'rounded=0;'}whiteSpace=wrap;html=1;fillColor=${bg || 'none'};strokeColor=${bc};${dashed}`, g, { parent });
       else {
         if (bg && !(el.classList.contains('app') || el.classList.contains('view') || el.classList.contains('page'))) add(`${round ? 'ellipse;' : 'rounded=0;'}html=1;fillColor=${bg};strokeColor=none;`, g, { parent });
@@ -86,6 +89,13 @@ export function toDrawio() {
         if (clip && (t + (rects[0].height) / 2 > clip.bottom || b < clip.top)) continue;
         const lines = new Set(rects.map((q) => Math.round(q.top))).size; let txt = node.textContent.replace(/\s+/g, ' ').trim();
         if (cs.textTransform === 'uppercase') txt = txt.toUpperCase();
+        if (BARS && el.closest('.phone')) { // lo-fi: one grey bar per line of text, as long as the text
+          const dark = el.matches('h1, h2, h3, .h1, .h2, .h3, b, strong, .btn, .eyebrow') || el.closest('h1, h2, h3, .h1, .h2, .h3, .btn');
+          const th = Math.max(2, parseFloat(cs.fontSize) * 0.48 * k), byLine = new Map();
+          rects.forEach((q) => { const key = Math.round(q.top); const o = byLine.get(key); byLine.set(key, o ? { top: o.top, h: o.h, l: Math.min(o.l, q.left), r: Math.max(o.r, q.right) } : { top: q.top, h: q.height, l: q.left, r: q.right }); });
+          for (const ln of byLine.values()) if (!clip || ln.top + ln.h / 2 < clip.bottom) add(`rounded=1;arcSize=50;html=1;fillColor=${dark ? '#6B6B6B' : '#A9A9A9'};strokeColor=none;`, { x: ln.l - ox, y: ln.top + ln.h / 2 - th / 2 - oy, w: ln.r - ln.l, h: th }, { parent });
+          continue;
+        }
         const fs = R(parseFloat(cs.fontSize) * k), bold = parseInt(cs.fontWeight) >= 600 ? 1 : 0, ul = /underline/.test(cs.textDecorationLine) ? 4 : 0;
         const multi = lines > 1, al = multi && cs.textAlign === 'center' ? 'center' : 'left';
         const gx = multi ? (al === 'center' ? r.left : l) : l, gw = multi ? (al === 'center' ? r.width : Math.min(r.right, rr + 8) - l + 6) : rr - l + 6;
