@@ -67,7 +67,7 @@ Screens are pure functions of state, so the live app and the PDF boards render t
   - Passed skill check: 4-question recall checks for SQL, Python, detection models, T&S policy and communication; pass with 3. Labelled as not a certification.
   - Completed learning, and self-reported.
 - **Live jobs** from MyCareersFuture through `api/jobs.js` (public API, no key, cached 30 min). If the exact target title finds nothing, the search widens step by step and says so. Listed skills are mapped to Stash skills; the original listing opens on MyCareersFuture. Four labelled sample listings stay as a fallback.
-- **PDF to podcast with real audio.** Text is extracted on the device with pdf.js; the script is a template (no LLM, by decision); voices are rendered on the device by Kokoro-82M through kokoro-js in a Web Worker (about 90 MB downloaded once, Apache-2.0). Six voices, two-host or solo. Real progress per line, cancel, failure with retry or "use the device voice instead", resume after reload. The result is a WAV file with exact line timings, played through an audio element with seek, speed, sleep timer, queue and lock-screen controls, and downloadable.
+- **PDF to podcast with real audio.** Text is extracted on the device with pdf.js; the script is a template (no LLM, by decision); voices are rendered on the device by Kokoro-82M through kokoro-js in a Web Worker (Apache-2.0). High quality (default) uses the full-precision model, about 330 MB downloaded once, which on a laptop renders about as fast as real time; Standard uses the 90 MB 8-bit model. Page numbers, classification labels such as "SMU Classification: Restricted" and lines repeated on most pages are removed before the script is written, and bullet points become separate sentences. Six voices, two-host or solo. Real progress per line, cancel, failure with retry or "use the device voice instead", resume after reload. The result is a WAV file with exact line timings, played through an audio element with seek, speed, sleep timer, queue and lock-screen controls, and downloadable.
 - **Sync across devices** without a password: a random 16-character code. State is encrypted on the device (AES-GCM, key from PBKDF2) and stored as ciphertext in a private Vercel Blob store through `api/sync.js`. Turning sync off deletes the stored copy. Audio and attachments do not sync.
 - Study plan, month calendar and `.ics` export; import and export (Markdown, JSON, CSV).
 - Accessibility settings: text size, reduce transparency, reduce motion.
@@ -80,7 +80,7 @@ Screens are pure functions of state, so the live app and the PDF boards render t
 | Accounts | Demo sign-in; sync code instead of a password | Real accounts with recovery |
 | Script writing | Template quoting the PDF | Optional LLM step (deliberately not built) |
 | OCR | Not connected | OCR provider |
-| Voice speed | 2 to 4x slower than real time on a laptop CPU | WebGPU when stable, or server rendering for slow phones |
+| Voice speed | About real time on a laptop with High quality; slower on phones | WebGPU when stable, or server rendering for slow phones |
 | Jobs | One source | More sources, saved searches |
 | DOCX résumés | Attached, not read | Server parser |
 

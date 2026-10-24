@@ -173,14 +173,15 @@ async function runJob(j) {
   if (!sc || !doc) { Object.assign(j, { status: 'failed', error: 'The script or its document is missing' }); return persist(); }
   try {
     Object.assign(j, { stage: 0, progress: 0.02, dl: 0, line: 0, lines: sc.segments.length }); paint();
-    await voiceEngine.load((loaded, total) => { j.dl = loaded / total; j.progress = 0.02 + 0.08 * j.dl; paint(); });
+    const dtype = sc.config.quality === 'standard' ? 'q8' : 'fp32';
+    await voiceEngine.load((loaded, total) => { j.dl = loaded / total; j.progress = 0.02 + 0.08 * j.dl; paint(); }, dtype);
     if (!alive()) return;
     j.stage = 1; const parts = []; let rate = 24000;
     for (let i = 0; i < sc.segments.length; i++) {
       if (!alive()) return;
       if (S.demo.failNext && i >= sc.segments.length * 0.6) { S.demo.failNext = false; throw Object.assign(new Error('sim'), { sim: true }); }
       const g = sc.segments[i], voice = g.speaker === 'B' ? sc.config.voiceB || 'am_michael' : sc.config.voiceA || 'af_heart';
-      const r = await voiceEngine.speak(spoken(sc, g), voice, g.emph ? 0.92 : 1);
+      const r = await voiceEngine.speak(spoken(sc, g), voice, g.emph ? 0.92 : 1, dtype);
       parts.push(r.audio); rate = r.rate; j.line = i + 1; j.progress = 0.1 + 0.85 * ((i + 1) / sc.segments.length); later(); paint();
     }
     if (!alive()) return;
@@ -442,7 +443,7 @@ const CHANGE = {
     let lastPaint = 0;
     try {
       const pages = await readPdf(f, (done, total) => { Object.assign(p2p(), { done, total }); if (performance.now() - lastPaint > 120 && route().id === 'p2p-upload') { lastPaint = performance.now(); render(); } });
-      const doc = { id: uid('doc'), title: f.name.replace(/\.pdf$/i, '').replace(/[-_]+/g, ' '), name: f.name, size: f.size, pages, sample: false, extractor: 'pdfjs', addedAt: today(), keepText: keepText !== false };
+      const doc = { id: uid('doc'), title: f.name.replace(/\.pdf$/i, '').replace(/[-_]+/g, ' '), name: f.name, size: f.size, pages: [...pages], removed: pages.removed || [], sample: false, extractor: 'pdfjs', addedAt: today(), keepText: keepText !== false };
       S.docs.push(doc); if (S.docs.length > 4) S.docs.shift();
       S.draft.p2p = { status: 'ready', docId: doc.id, cfg: { ...P2P_DEFAULTS }, keepText };
     } catch (e) { S.draft.p2p = { status: 'error', error: e.code || 'notpdf', keepText }; }

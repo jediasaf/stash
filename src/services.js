@@ -29,25 +29,59 @@ export async function readPdf(file, onProgress = () => {}) {
   let pdf;
   try { pdf = await lib.getDocument({ data: buf }).promise; } catch (e) { throw fail(e?.name === 'PasswordException' ? 'locked' : 'notpdf'); }
   if (pdf.numPages > P2P_LIMITS.pages) throw fail('pages');
-  const pages = [];
+  const raw = [];
   for (let n = 1; n <= pdf.numPages; n++) {
     const tc = await (await pdf.getPage(n)).getTextContent();
     const text = tc.items.map((i) => i.str + (i.hasEOL ? '\n' : '')).join('').replace(/[ \t]+/g, ' ').trim().slice(0, 6000);
-    const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
-    const tokens = text.split(/\s+/).filter(Boolean);
-    const numeric = tokens.filter((t) => /^[\d.,%$()-]+$/.test(t)).length;
-    const flag = text.length < 40 ? 'scanned' : tokens.length > 12 && numeric / tokens.length > 0.4 ? 'table' : null;
-    pages.push({ n, heading: lines[0] && lines[0].length <= 80 ? lines[0] : '', text: text.replace(/\n/g, ' '), flag, include: !flag });
+    raw.push(text.split('\n').map((l) => l.trim()).filter(Boolean));
     onProgress(n, pdf.numPages);
   }
+  const { pages: cleanLines, removed } = cleanPages(raw);
+  const pages = cleanLines.map((lines, i) => {
+    const text = speakable(lines), tokens = text.split(/\s+/).filter(Boolean);
+    const numeric = tokens.filter((t) => /^[\d.,%$()-]+$/.test(t)).length;
+    const flag = text.length < 40 ? 'scanned' : tokens.length > 12 && numeric / tokens.length > 0.4 ? 'table' : null;
+    return { n: i + 1, heading: lines[0] && lines[0].length <= 80 ? lines[0].replace(/^[•▪●◦·\-–*]\s*/, '') : '', text, flag, include: !flag };
+  });
   if (pages.every((p) => p.flag === 'scanned')) throw fail('empty');
+  pages.removed = removed;
   return pages;
 }
 
-const sentences = (t) => (t.match(/[^.!?]+[.!?]+/g) || [t]).map((x) => x.trim()).filter((x) => x.length > 8);
+// Lines that are page furniture rather than content: page numbers, classification labels, and
+// anything repeated on most pages (running headers and footers). Rule-based; no AI involved.
+const PAGE_NO = /^(?:page|slide|p\.)?\s*\d{1,4}(?:\s*(?:of|\/)\s*\d{1,4})?$/i;
+const CLASSIFICATION = /\b(?:[A-Z][A-Za-z]{1,12}\s+)?(?:information\s+)?classification\s*:\s*(?:restricted|internal(?:\s+use)?|confidential|public|sensitive|official|secret)\b/gi;
+const norm = (l) => l.toLowerCase().replace(/\s+/g, ' ').trim();
+export function cleanPages(raw) {
+  const removed = new Set(), freq = new Map();
+  raw.forEach((ls) => new Set(ls.map(norm)).forEach((k) => freq.set(k, (freq.get(k) || 0) + 1)));
+  const repeatAt = Math.max(3, Math.ceil(raw.length * 0.4));
+  const pages = raw.map((ls) => ls.flatMap((line) => {
+    if (PAGE_NO.test(line)) { removed.add('Page numbers'); return []; }
+    if (raw.length >= 3 && line.length <= 90 && freq.get(norm(line)) >= repeatAt) { removed.add(line); return []; }
+    const kept = line.replace(CLASSIFICATION, (m) => { removed.add(m.trim()); return ' '; }).replace(/\s+/g, ' ').trim();
+    if (kept && PAGE_NO.test(kept)) { removed.add('Page numbers'); return []; }
+    return kept ? [kept] : [];
+  }));
+  return { pages, removed: [...removed] };
+}
+// Joins a page's lines into text a voice can read: bullets and slide-style lines become their own sentences.
+export function speakable(lines) {
+  const out = lines.map((l, i) => {
+    const bullet = /^[•▪●◦·\-–*]\s+/.test(l), line = l.replace(/^[•▪●◦·\-–*]\s+/, '');
+    const next = lines[i + 1] || '', ends = /[.!?:;]$/.test(line);
+    const breakAfter = !ends && (bullet || /^[•▪●◦·\-–*]\s+/.test(next) || (line.length < 90 && /^[A-Z0-9“"(]/.test(next)) || i === lines.length - 1);
+    return line + (breakAfter ? '.' : '');
+  }).join(' ');
+  return out.replace(/\s*[•▪●◦]\s+/g, '. ').replace(/(?:^|\s)\d{1,3}(?=\.\s)/g, '').replace(/\.\s*\./g, '.').replace(/\s+/g, ' ').trim();
+}
+
+const splitLong = (s) => { if (s.length <= 240) return [s]; const cut = s.lastIndexOf(', ', 200) > 60 ? s.lastIndexOf(', ', 200) : s.lastIndexOf('; ', 200) > 60 ? s.lastIndexOf('; ', 200) : s.lastIndexOf(' ', 200); return [s.slice(0, cut).trim() + '.', ...splitLong(s.slice(cut + 1).trim().replace(/^./, (c) => c.toUpperCase()))]; };
+const sentences = (t) => (t.match(/[^.!?]+[.!?]+/g) || [t]).map((x) => x.trim()).filter((x) => x.length > 8).flatMap(splitLong);
 const hash = (str) => { let h = 5381; for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) >>> 0; return h.toString(16).padStart(8, '0'); };
 
-/** DEMO script writer. Quotes sentences from the selected pages and marks every line it adds itself. */
+/** Script writer. Quotes sentences from the selected pages and marks every line it adds itself. No language model. */
 export function buildScript(doc, cfg) {
   const pages = doc.pages.filter((p) => p.include && p.text.trim());
   const per = cfg.treatment === 'summary' ? 1 : 3; const duo = cfg.format === 'duo';
@@ -55,7 +89,7 @@ export function buildScript(doc, cfg) {
   for (const p of pages) {
     const body = sentences(p.heading && p.text.startsWith(p.heading) ? p.text.slice(p.heading.length) : p.text).slice(0, per);
     if (!body.length) continue;
-    if (duo && p.heading) segs.push({ speaker: 'B', kind: 'added', page: p.n, text: `What does page ${p.n} say about ${p.heading.toLowerCase()}?` });
+    if (duo && p.heading) segs.push({ speaker: 'B', kind: 'added', page: p.n, text: `${segs.length > 1 ? 'Next' : 'First'}, page ${p.n}: ${p.heading.replace(/[.:;]+$/, '')}. What is the key point?` });
     body.forEach((t) => segs.push({ speaker: 'A', kind: 'source', page: p.n, text: t }));
     if (p.example && cfg.focus.includes('Examples')) segs.push({ speaker: duo ? 'B' : 'A', kind: 'added', page: p.n, text: p.example });
   }
@@ -127,16 +161,18 @@ export const files = {
 };
 
 // ---------- real speech, rendered on this device ----------
-// Kokoro-82M (Apache-2.0) runs in a Web Worker through kokoro-js. The model (~90 MB) downloads once and is cached by the browser.
+// Kokoro-82M (Apache-2.0) runs in a Web Worker through kokoro-js. High quality uses the fp32 model (~330 MB, also the faster
+// one on WASM); Standard uses q8 (~90 MB). The model downloads once and is cached by the browser.
 export const VOICES = [['af_heart', 'Heart (US, warm)'], ['af_bella', 'Bella (US, bright)'], ['am_michael', 'Michael (US, calm)'], ['am_fenrir', 'Fenrir (US, deep)'], ['bf_emma', 'Emma (UK)'], ['bm_george', 'George (UK)']];
 const WORKER = `
 let tts;
 self.onmessage = async (e) => {
-  const { id, type, text, voice, speed } = e.data;
+  const { id, type, text, voice, speed, dtype = 'fp32' } = e.data;
   try {
-    if (!tts) {
+    if (!tts || self.dtype !== dtype) {
       const { KokoroTTS } = await import('https://cdn.jsdelivr.net/npm/kokoro-js@1.2.1/+esm');
-      tts = await KokoroTTS.from_pretrained('onnx-community/Kokoro-82M-v1.0-ONNX', { dtype: 'q8', device: 'wasm',
+      self.dtype = dtype;
+      tts = await KokoroTTS.from_pretrained('onnx-community/Kokoro-82M-v1.0-ONNX', { dtype, device: 'wasm',
         progress_callback: (p) => { if (p.status === 'progress' && p.total > 1e6) self.postMessage({ id, type: 'download', loaded: p.loaded, total: p.total }); } });
     }
     if (type === 'load') return self.postMessage({ id, type: 'ready' });
@@ -155,8 +191,8 @@ function engine() {
 }
 const ask = (msg, progress) => new Promise((ok, no) => { const id = ++seq; pending.set(id, { ok, no, progress }); engine().postMessage({ ...msg, id }); });
 export const voiceEngine = {
-  load: (onProgress) => ask({ type: 'load' }, onProgress),
-  speak: (text, voice, speed) => ask({ type: 'say', text, voice, speed }),
+  load: (onProgress, dtype) => ask({ type: 'load', dtype }, onProgress),
+  speak: (text, voice, speed, dtype) => ask({ type: 'say', text, voice, speed, dtype }),
   stop: () => { if (worker) { worker.terminate(); worker = null; } for (const p of pending.values()) p.no(Object.assign(new Error('cancelled'), { cancelled: true })); pending.clear(); },
 };
 /** Joins rendered lines into one WAV file and returns it with each line's real start time and length. */

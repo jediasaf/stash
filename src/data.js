@@ -183,7 +183,7 @@ export const SAMPLE_DOC = {
   ],
 };
 
-export const P2P_DEFAULTS = { format: 'duo', treatment: 'detailed', language: 'en', minutes: 10, voiceA: 'af_heart', voiceB: 'am_michael', focus: ['Key ideas', 'Examples'], note: '' };
+export const P2P_DEFAULTS = { format: 'duo', treatment: 'detailed', language: 'en', minutes: 10, voiceA: 'af_heart', voiceB: 'am_michael', focus: ['Key ideas', 'Examples'], note: '', quality: 'high' };
 export const P2P_LIMITS = { mb: 25, pages: 200 };
 export const STAGES = ['Loading the voice', 'Rendering voices', 'Timing the transcript', 'Saving the episode'];
 

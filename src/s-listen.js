@@ -143,6 +143,7 @@ export default {
       return {
         top: stepTop(2, 'p2p-upload'),
         body: `${title('Check what was read', `${doc.pages.length} pages · ${inc.length} selected${flagged.length ? ` · ${flagged.length} need a look` : ''}`)}
+          ${doc.removed?.length ? notice(`<span>Left out of every page so they are not read aloud: ${doc.removed.map((x) => x === 'Page numbers' ? 'page numbers' : `“${esc(x)}”`).join(', ')}. Use “View and correct” on a page to put text back.</span>`, { title: 'Page clutter removed' }) : ''}
           <div class="btn-row" style="gap:4px 18px">${link('Select all readable', { act: 'p2p-all', arg: 1 })}${link('Clear', { act: 'p2p-all', arg: 0 })}${doc.sample ? '' : link('Read the file again', { go: 'p2p-upload' })}</div>
           <div>${doc.pages.map((p) => `<div class="pg ${p.include ? '' : 'off'}">
             <input type="checkbox" id="pg${p.n}" data-change="p2p-page" value="${p.n}" ${p.include ? 'checked' : ''} ${!p.text.trim() ? 'disabled' : ''} aria-label="Include page ${p.n}">
@@ -169,10 +170,11 @@ export default {
           <div><p class="label">Format</p><div style="margin-top:6px">${seg('Format', [['solo', 'Solo narration'], ['duo', 'Two hosts']], c.format, 'set', 'draft.p2p.cfg.format=')}</div></div>
           <div><p class="label">Treatment</p><div style="margin-top:6px">${seg('Treatment', [['summary', 'Summary'], ['detailed', 'Detailed']], c.treatment, 'set', 'draft.p2p.cfg.treatment=')}</div><p class="cap" style="margin-top:6px">About ${est} from your selected pages.</p></div>
           <div><p class="label">Learning focus</p><div class="chips" style="margin-top:6px" role="group" aria-label="Learning focus">${['Key ideas', 'Examples', 'Definitions', 'Exam revision'].map((f) => chip(f, { on: c.focus.includes(f), tick: true, act: 'toggle-in', arg: 'draft.p2p.cfg.focus|' + f })).join('')}</div></div>
-          ${field({ label: 'Language', bind: 'draft.p2p.cfg.language', type: 'select', value: c.language, options: [['en', 'English'], ['id', 'Bahasa Indonesia (needs a translation provider)', 1], ['zh', 'Chinese (needs a translation provider)', 1]] })}
+          ${field({ label: 'Language', bind: 'draft.p2p.cfg.language', type: 'select', value: c.language, options: [['en', 'English'], ['id', 'Bahasa Indonesia', 1], ['zh', 'Chinese', 1]], hint: 'More languages coming soon.' })}
           ${field({ label: c.format === 'duo' ? 'Host A voice' : 'Narrator voice', bind: 'draft.p2p.cfg.voiceA', type: 'select', value: c.voiceA || 'af_heart', options: vo })}
           ${c.format === 'duo' ? field({ label: 'Host B voice', bind: 'draft.p2p.cfg.voiceB', type: 'select', value: c.voiceB || 'am_michael', options: vo, hint: 'Open-source synthetic voices. No real person is imitated.' }) : ''}
-          <div class="card"><p class="eyebrow">Estimate</p><dl class="kv" style="margin-top:10px"><dt>Episode length</dt><dd>${est}</dd><dt>Script</dt><dd>Instant (template)</dd><dt>Audio</dt><dd>Made on this device</dd><dt>Cost</dt><dd>Free</dd></dl><p class="cap" style="margin-top:10px">The first time, Stash downloads a 90 MB voice model and keeps it for next time. Rendering takes roughly one to four minutes per minute of audio, depending on the device. You can keep using Stash meanwhile.</p></div>`,
+          <div><p class="label">Voice quality</p><div style="margin-top:6px">${seg('Voice quality', [['high', 'High'], ['standard', 'Standard']], c.quality || 'high', 'set', 'draft.p2p.cfg.quality=')}</div><p class="cap" style="margin-top:6px">${(c.quality || 'high') === 'high' ? 'Clearest voice. Downloads about 330 MB once, so use Wi-Fi the first time.' : 'Smaller download (about 90 MB), rougher voice and slower to render.'}</p></div>
+          <div class="card"><p class="eyebrow">Estimate</p><dl class="kv" style="margin-top:10px"><dt>Episode length</dt><dd>${est}</dd><dt>Script</dt><dd>Instant</dd><dt>Audio</dt><dd>Made on this device</dd><dt>Cost</dt><dd>Free</dd></dl><p class="cap" style="margin-top:10px">The first time, Stash downloads the voice model and keeps it for next time. On a laptop, rendering takes about as long as the episode itself; phones take longer. You can keep using Stash meanwhile.</p></div>`,
         foot: btn('Draft the script', { act: 'p2p-script' }),
       };
     },
@@ -187,7 +189,7 @@ export default {
       return {
         top: stepTop(4, 'p2p-config'),
         body: `${title('Edit before it is spoken', `${sc.segments.length} lines · about ${mins(st.seconds)} · ${st.chars.toLocaleString()} characters`)}
-          ${demo('This script is a template: it quotes sentences from your pages and adds short linking lines. No language model wrote it.')}
+          ${notice('<span>Lines marked <b style="display:inline">From PDF</b> are quoted from your pages. Lines marked <b style="display:inline">Added by Stash</b> link them together. Edit anything before it is spoken.</span>')}
           <div class="tags">${tag('From PDF · page link', 'src')}${tag('Added by Stash', 'added')}</div>
           <div>${sc.segments.map((g, n) => `<div class="seg-ed ${g.kind}"><div class="hd"><b class="strong">${duo ? 'Host ' + g.speaker : 'Narrator'}</b>${srcTag(g, sc.docId)}<span class="sp"></span>${icbtn('play', `Hear line ${n + 1}`, { act: 'say', arg: n })}${icbtn('bolt', g.emph ? 'Remove emphasis' : 'Emphasise this line', { act: 'seg-emph', arg: n, on: g.emph, pressed: !!g.emph })}${icbtn('trash', `Delete line ${n + 1}`, { act: 'seg-del', arg: n })}</div><label class="sr" for="sg${n}">Line ${n + 1} text</label><textarea id="sg${n}" data-bind="scripts.${si}.segments.${n}.text">${esc(g.text)}</textarea></div>`).join('')}</div>
           <section class="stack">${sec('Pronunciation')}
