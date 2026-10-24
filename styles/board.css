@@ -102,3 +102,14 @@ body[data-fi="midfi"] .b-row { position: relative; grid-template-columns: repeat
 body[data-fi="midfi"] .phone { zoom: 0.77; }
 body[data-fi="midfi"] svg.flow { position: absolute; z-index: 40; pointer-events: none; overflow: visible; }
 body[data-fi="midfi"] .phone .more { background: #0068C4; }
+
+/* Hi-fi sheet: the blue prototype in real phone frames, blue tap badges and connectors */
+body[data-hifi="1"] { --b-bg: #FFFFFF; --b-ink: #030404; --b-ink2: #595F5F; --b-accent: #0068C4; }
+body[data-hifi="1"][data-sheet="1"] #boards, body[data-hifi="1"][data-sheet="1"] .page { background: #FFFFFF; }
+body[data-hifi="1"] .phone { zoom: 0.77; border-radius: 46px; box-shadow: 0 0 0 9px #030404, 0 0 0 10px #595F5F; overflow: hidden; }
+body[data-hifi="1"] .phone::before { content: ""; position: absolute; top: 0; left: 50%; width: 120px; height: 26px; margin-left: -60px; background: #030404; border-radius: 0 0 16px 16px; z-index: 30; }
+body[data-hifi="1"] .b-row { position: relative; grid-template-columns: repeat(4, 300px); }
+body[data-hifi="1"] .b-col { padding-top: 12px; }
+body[data-hifi="1"] .b-label { margin-bottom: 16px; }
+body[data-hifi="1"] .b-label .via { color: #0068C4; font-weight: 800; }
+body[data-hifi="1"] svg.flow { position: absolute; z-index: 40; pointer-events: none; overflow: visible; }

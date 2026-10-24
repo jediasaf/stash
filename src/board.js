@@ -56,7 +56,10 @@ const board = ([t, sub, ids], b) => page(`<div class="b-over"><span>Stash / boar
   <div class="b-foot"><span>390 pt wide phone · sample content · ${FI[1].toLowerCase()}</span><span>${b > 0 ? `<a href="#b-${b - 1}">← Board ${b}</a> &nbsp; ` : ''}<a href="#cover">Journey map</a>${b < BOARDS.length - 1 ? ` &nbsp; <a href="#b-${b + 1}">Board ${b + 2} →</a>` : ''}</span></div>`);
 
 // The lo-fi wireframe is one continuous sheet (the team's Phase 2 format): boards stacked, no notes, no page breaks.
-const SHEET = fi === 'lofi' || fi === 'midfi';
+// Hi-fi sheet: the full-colour prototype in the same one-sheet format as the wireframes (?fi=proto&layout=sheet).
+const HIFI = fi === 'proto' && new URLSearchParams(location.search).get('layout') === 'sheet';
+const SHEET = fi === 'lofi' || fi === 'midfi' || HIFI;
+document.body.dataset.hifi = HIFI ? '1' : '';
 document.body.dataset.sheet = SHEET ? '1' : '';
 document.getElementById('boards').innerHTML = SHEET ? BOARDS.map(board).join('') : cover() + audit() + BOARDS.map(board).join('');
 
@@ -80,16 +83,18 @@ function flowArrow(rowEl, via, next) {
   const FRAME = 13; // the device frame drawn outside each phone
   // Badge just past the tapped control when that spot is free, otherwise tucked inside its right end.
   const others = [...via.closest('.phone').querySelectorAll('button, a, input, label.btn, .chip, .row')].filter((e) => e !== via && !via.contains(e) && !e.contains(via)).map((e) => e.getBoundingClientRect());
-  const cy = v.top + v.height / 2, hits = (x) => others.some((o) => o.width && x + 17 > o.left && x - 17 < o.right && cy + 17 > o.top && cy - 17 < o.bottom);
+  const view = (via.closest('.scroll') || via.closest('.phone')).getBoundingClientRect(); // only content in the scrolling area can be out of view
+  const hidden = v.top + v.height / 2 > view.bottom - 8 || v.top + v.height / 2 < view.top + 8; // control scrolled out of the visible screen
+  const cy = Math.max(own.top + 60, Math.min(v.top + v.height / 2, own.bottom - 60)), hits = (x) => others.some((o) => o.width && x + 17 > o.left && x - 17 < o.right && cy + 17 > o.top && cy - 17 < o.bottom);
   const outside = v.right + 20, bxAbs = !hits(outside) && outside < own.right - 18 ? outside : Math.min(v.right - 16, own.right - 20);
   // The dotted lead-in to the phone edge is drawn only when it would not cross another control.
-  const lead = !others.some((o) => o.width && o.left > bxAbs && o.left < own.right && cy > o.top && cy < o.bottom);
+  const lead = !hidden && !others.some((o) => o.width && o.left > bxAbs && o.left < own.right && cy > o.top && cy < o.bottom);
   const bx = bxAbs - R.left, sx = own.right - R.left + FRAME + 2, sy = cy - R.top;
   const ex = n.left - R.left - FRAME - 1, top = n.top - R.top + 70, bottom = n.bottom - R.top - 70;
   const ey = Math.max(top, Math.min(sy, bottom)); // straight across whenever the target phone spans the same height
   const mx = (sx + ex - 14) / 2, r = Math.min(10, (ex - sx) / 4), down = ey >= sy ? 1 : -1;
   const d = Math.abs(ey - sy) < 1 ? `M${sx} ${sy} H${ex - 14}` : `M${sx} ${sy} H${mx - r} Q${mx} ${sy} ${mx} ${sy + down * r} V${ey - down * r} Q${mx} ${ey} ${mx + r} ${ey} H${ex - 14}`;
-  rowEl.insertAdjacentHTML('beforeend', `<svg class="flow" style="left:0;top:0;width:${R.width}px;height:${R.height}px" viewBox="0 0 ${R.width} ${R.height}" aria-hidden="true"><path d="${d}" fill="none" stroke="#0088FF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M${ex - 16} ${ey - 9} L${ex} ${ey} L${ex - 16} ${ey + 9} Z" fill="#0088FF"/>${lead ? `<path d="M${bx} ${sy} H${sx}" stroke="#0088FF" stroke-width="2.5" stroke-dasharray="2 5" stroke-linecap="round"/>` : ''}<circle cx="${bx}" cy="${sy}" r="17" fill="#0088FF" stroke="#FFFFFF" stroke-width="3"/><path d="M${bx + 2} ${sy - 10} L${bx - 6} ${sy + 2} H${bx} L${bx - 2} ${sy + 10} L${bx + 6} ${sy - 2} H${bx} Z" fill="#FFFFFF"/></svg>`);
+  rowEl.insertAdjacentHTML('beforeend', `<svg class="flow" style="left:0;top:0;width:${R.width}px;height:${R.height}px" viewBox="0 0 ${R.width} ${R.height}" aria-hidden="true"><path d="${d}" fill="none" stroke="#0088FF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M${ex - 16} ${ey - 9} L${ex} ${ey} L${ex - 16} ${ey + 9} Z" fill="#0088FF"/>${lead ? `<path d="M${bx} ${sy} H${sx}" stroke="#0088FF" stroke-width="2.5" stroke-dasharray="2 5" stroke-linecap="round"/>` : ''}${hidden ? '' : `<circle cx="${bx}" cy="${sy}" r="17" fill="#0088FF" stroke="#FFFFFF" stroke-width="3"/><path d="M${bx + 2} ${sy - 10} L${bx - 6} ${sy + 2} H${bx} L${bx - 2} ${sy + 10} L${bx + 6} ${sy - 2} H${bx} Z" fill="#FFFFFF"/>`}</svg>`);
 }
 document.querySelectorAll('.b-row').forEach((rowEl) => {
   const cols = [...rowEl.children];
@@ -99,7 +104,7 @@ document.querySelectorAll('.b-row').forEach((rowEl) => {
     if (!via) return;
     const x = (col.offsetLeft + col.offsetWidth + next.offsetLeft) / 2;
     col.querySelector('.b-label').insertAdjacentHTML('beforeend', `<span class="via">${esc(via.dataset.label.length > 20 ? via.dataset.label.slice(0, 19) + '…' : via.dataset.label)} →</span>`);
-    if (fi === 'midfi') return flowArrow(rowEl, via, next);
+    if (fi === 'midfi' || HIFI) return flowArrow(rowEl, via, next);
     rowEl.insertAdjacentHTML('beforeend', `<div class="b-arrow" style="left:${x}px"><svg width="34" height="14" viewBox="0 0 34 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7h22M24 2.5l8 4.500-8 4.500z"/></svg></div>`);
   });
 });

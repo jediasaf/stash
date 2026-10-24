@@ -5,8 +5,9 @@ const rgb = (c) => { const m = c.match(/[\d.]+/g); if (!m) return null; const [r
 const R = (n) => Math.round(n * 10) / 10;
 
 export function toDrawio() {
-  const MID = document.body.dataset.fi === 'midfi';
-  const FONT = MID ? 'fontFamily=Lato;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DLato;' : '${FONT}';
+  const HIFI = document.body.dataset.hifi === '1', MID = document.body.dataset.fi === 'midfi' || HIFI;
+  const FRAME = HIFI ? '#030404' : '#8FBBE8';
+  const FONT = HIFI ? 'fontFamily=Nunito Sans;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DNunito%2BSans;' : MID ? 'fontFamily=Lato;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DLato;' : 'fontFamily=Helvetica;';
   const B64 = (s) => btoa(unescape(encodeURIComponent(s)));
   const BADGE = B64('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><circle cx="20" cy="20" r="17" fill="#0088FF" stroke="#FFFFFF" stroke-width="3"/><path d="M22 10 L14 22 H20 L18 30 L26 18 H20 Z" fill="#FFFFFF"/></svg>');
   const pages = document.body.dataset.sheet === '1' ? [document.getElementById('boards')] : [...document.querySelectorAll('.page')];
@@ -37,12 +38,12 @@ export function toDrawio() {
       }
       if (el.classList.contains('phone')) {
         const zoom = parseFloat(cs.zoom) || 1;
-        if (MID) add('rounded=1;arcSize=14;html=1;fillColor=#FFFFFF;strokeColor=#8FBBE8;strokeWidth=2.5;', { x: g.x - 11, y: g.y - 11, w: g.w + 22, h: g.h + 22 }, { parent });
-        const id = add(`${MID ? 'rounded=1;arcSize=12;strokeColor=#8FBBE8;' : 'rounded=0;strokeColor=#000000;'}whiteSpace=wrap;html=1;fillColor=#FFFFFF;container=1;collapsible=0;recursiveResize=0;`, g, { parent });
+        if (MID) add('rounded=1;arcSize=14;html=1;fillColor=#FFFFFF;strokeColor=${FRAME};strokeWidth=2.5;', { x: g.x - 11, y: g.y - 11, w: g.w + 22, h: g.h + 22 }, { parent });
+        const id = add(`${MID ? 'rounded=1;arcSize=12;strokeColor=${FRAME};' : 'rounded=0;strokeColor=#000000;'}whiteSpace=wrap;html=1;fillColor=#FFFFFF;container=1;collapsible=0;recursiveResize=0;`, g, { parent });
         phoneIds.set(el, id); const inner = { top: r.top, bottom: r.bottom };
         for (const ch of el.children) walk(ch, id, r.left, r.top, inner, zoom);
-        add(`${MID ? 'rounded=1;arcSize=12;strokeColor=#8FBBE8;strokeWidth=1.5;' : 'rounded=0;strokeColor=#000000;'}html=1;fillColor=none;pointerEvents=0;`, { x: 0, y: 0, w: g.w, h: g.h }, { parent: id });
-        if (MID) add('rounded=1;arcSize=40;html=1;fillColor=#FFFFFF;strokeColor=#8FBBE8;strokeWidth=1.5;', { x: g.w / 2 - 50, y: -2, w: 100, h: 20 }, { parent: id });
+        add(`${MID ? 'rounded=1;arcSize=12;strokeColor=${FRAME};strokeWidth=1.5;' : 'rounded=0;strokeColor=#000000;'}html=1;fillColor=none;pointerEvents=0;`, { x: 0, y: 0, w: g.w, h: g.h }, { parent: id });
+        if (MID) add('rounded=1;arcSize=40;html=1;fillColor=#FFFFFF;strokeColor=${FRAME};strokeWidth=1.5;', { x: g.w / 2 - 50, y: -2, w: 100, h: 20 }, { parent: id });
         return;
       }
       if (el.classList.contains('scroll')) clip = { top: Math.max(clip?.top ?? -1e9, r.top), bottom: Math.min(clip?.bottom ?? 1e9, r.bottom) };
@@ -100,13 +101,14 @@ export function toDrawio() {
       const nextId = cols[i + 1].dataset.id, ph = col.querySelector('.phone'), nph = cols[i + 1].querySelector('.phone');
       const tap = [...col.querySelectorAll(`[data-hot="${nextId}"]`)].find((e) => !e.closest('.tabs') && !e.closest('.top')); if (!tap) return;
       const pr = ph.getBoundingClientRect(), nr = nph.getBoundingClientRect(), tr = tap.getBoundingClientRect();
-      const y = tr.top + tr.height / 2, exitY = Math.max(0.02, Math.min(0.98, (y - pr.top) / pr.height)), entryY = Math.max(70, Math.min(y - nr.top, nr.height - 70)) / nr.height;
+      const sv = (tap.closest('.scroll') || ph).getBoundingClientRect(), ty = tr.top + tr.height / 2, hidden = ty > sv.bottom - 8 || ty < sv.top + 8;
+      const y = Math.max(pr.top + 60, Math.min(ty, pr.bottom - 60)), exitY = Math.max(0.02, Math.min(0.98, (y - pr.top) / pr.height)), entryY = Math.max(70, Math.min(y - nr.top, nr.height - 70)) / nr.height;
       const others = [...ph.querySelectorAll('button, a, input, label.btn, .chip, .row')].filter((e) => e !== tap && !tap.contains(e) && !e.contains(tap)).map((e) => e.getBoundingClientRect());
       const hits = (x) => others.some((o) => o.width && x + 15 > o.left && x - 15 < o.right && y + 15 > o.top && y - 15 < o.bottom);
       const bxAbs = !hits(tr.right + 18) && tr.right + 18 < pr.right - 16 ? tr.right + 18 : Math.min(tr.right - 15, pr.right - 18);
-      add(`shape=image;html=1;imageAspect=0;image=data:image/svg+xml,${BADGE};`, { x: bxAbs - pr.left - 15, y: y - pr.top - 15, w: 30, h: 30 }, { parent: a });
+      if (!hidden) add(`shape=image;html=1;imageAspect=0;image=data:image/svg+xml,${BADGE};`, { x: bxAbs - pr.left - 15, y: y - pr.top - 15, w: 30, h: 30 }, { parent: a });
       cells.push(`<mxCell id="c${pi}-${n++}" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;endArrow=block;endFill=1;endSize=8;html=1;strokeColor=#0088FF;strokeWidth=3;exitX=1;exitY=${exitY.toFixed(3)};exitDx=13;entryX=0;entryY=${entryY.toFixed(3)};entryDx=-13;" edge="1" parent="1" source="${a}" target="${b}"><mxGeometry relative="1" as="geometry"/></mxCell>`); }); });
-    const name = document.body.dataset.sheet === '1' ? (MID ? 'Mid-fi wireframe' : 'Lo-fi wireframe') : pi === 0 ? 'Journey map' : pi === 1 ? 'Audit' : `Board ${pi - 1}`;
+    const name = document.body.dataset.sheet === '1' ? (HIFI ? 'Hi-fi prototype' : MID ? 'Mid-fi wireframe' : 'Lo-fi wireframe') : pi === 0 ? 'Journey map' : pi === 1 ? 'Audit' : `Board ${pi - 1}`;
     xml += `<diagram id="${pageId(pi)}" name="${name}"><mxGraphModel dx="1600" dy="1100" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="${Math.round(P.width)}" pageHeight="${Math.round(P.height)}" math="0" shadow="0"><root><mxCell id="0"/><mxCell id="1" parent="0"/>${cells.join('')}</root></mxGraphModel></diagram>`;
   });
   return xml + '</mxfile>';

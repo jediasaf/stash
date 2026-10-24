@@ -1,16 +1,16 @@
 #!/bin/bash
 # Exports the lo-fi (default) or mid-fi boards as an editable draw.io file. Run from the project root.
-# Usage: tools/build-drawio.sh [lofi|midfi]
+# Usage: tools/build-drawio.sh [lofi|midfi|hifi]
 set -e
 cd "$(dirname "$0")/.."
 CHROME="${CHROME:-/Applications/Google Chrome.app/Contents/MacOS/Google Chrome}"
 FI="${1:-lofi}"; PORT=4188; TMP="$(mktemp -d)"
-[ "$FI" = midfi ] && OUT=deliverables/04-Midfi-Mobile-Wireframe.drawio || OUT=deliverables/01-Lofi-Mobile-Wireframe.drawio
+case "$FI" in midfi) OUT=deliverables/04-Midfi-Mobile-Wireframe.drawio; Q="fi=midfi";; hifi) OUT=deliverables/03-Hifi-Mobile-Prototype.drawio; Q="fi=proto&layout=sheet";; *) OUT=deliverables/01-Lofi-Mobile-Wireframe.drawio; Q="fi=lofi";; esac
 python3 -m http.server $PORT >/dev/null 2>&1 & SERVER=$!
 trap 'kill $SERVER 2>/dev/null' EXIT
 sleep 1
 "$CHROME" --headless=new --disable-gpu --window-size=1700,1200 --virtual-time-budget=9000 --user-data-dir="$TMP/p" \
-  --dump-dom "http://localhost:$PORT/board.html?fi=$FI&export=drawio" > "$TMP/dom.html" 2>/dev/null & CPID=$!
+  --dump-dom "http://localhost:$PORT/board.html?$Q&export=drawio" > "$TMP/dom.html" 2>/dev/null & CPID=$!
 for i in $(seq 1 60); do sleep 1; grep -q '</html>' "$TMP/dom.html" 2>/dev/null && break; kill -0 $CPID 2>/dev/null || break; done
 kill $CPID 2>/dev/null || true; wait $CPID 2>/dev/null || true
 python3 - "$TMP/dom.html" "$OUT" <<'PY'

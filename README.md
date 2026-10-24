@@ -31,7 +31,10 @@ Rebuild the editable draw.io files (lo-fi and mid-fi):
 ```bash
 tools/build-drawio.sh lofi
 tools/build-drawio.sh midfi
+tools/build-drawio.sh hifi
 ```
+
+PDFs: `01` lo-fi, `04` mid-fi and `03-Hifi` hi-fi are single continuous sheets with tap badges and connectors; `02` interactive wireframe and `03-Mobile-Prototype` are the annotated versions (one board per page, design notes, cover and audit).
 
 ## Deploy
 
