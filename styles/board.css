@@ -88,16 +88,16 @@ body[data-sheet="1"] .b-note, body[data-sheet="1"] .b-foot, body[data-sheet="1"]
 body[data-sheet="1"] .b-title { font-size: 34px; margin-top: 4px; }
 body[data-sheet="1"] .b-row { flex: none; margin-top: 10px; }
 
-/* Mid-fi sheet: soft lavender page, rounded device frames with a notch, purple flow connectors */
-body[data-fi="midfi"] { --b-bg: #FFFFFF; --b-ink: #1E1F24; --b-ink2: #5F626A; --b-note: #FFFFFF; --b-line: #DDD9EE; --b-accent: #7A6AF0; --b-font: "Lato", system-ui, sans-serif; }
+/* Mid-fi sheet: soft lavender page, rounded device frames with a notch, blue flow connectors */
+body[data-fi="midfi"] { --b-bg: #FFFFFF; --b-ink: #1E1F24; --b-ink2: #5F626A; --b-note: #FFFFFF; --b-line: #D6E6F7; --b-accent: #0068C4; --b-font: "Lato", system-ui, sans-serif; }
 body[data-fi="midfi"][data-sheet="1"] #boards, body[data-fi="midfi"][data-sheet="1"] .page { background: #FFFFFF; }
-body[data-fi="midfi"] .phone { border-radius: 46px; box-shadow: 0 0 0 9px #FFFFFF, 0 0 0 11.5px #B9B1DC, 0 0 0 2px #B9B1DC; overflow: hidden; }
-body[data-fi="midfi"] .phone::before { content: ""; position: absolute; top: 0; left: 50%; width: 130px; height: 26px; margin-left: -65px; background: #FFFFFF; border: 2px solid #B9B1DC; border-top: 0; border-radius: 0 0 16px 16px; z-index: 30; }
+body[data-fi="midfi"] .phone { border-radius: 46px; box-shadow: 0 0 0 9px #FFFFFF, 0 0 0 11.5px #8FBBE8, 0 0 0 2px #8FBBE8; overflow: hidden; }
+body[data-fi="midfi"] .phone::before { content: ""; position: absolute; top: 0; left: 50%; width: 130px; height: 26px; margin-left: -65px; background: #FFFFFF; border: 2px solid #8FBBE8; border-top: 0; border-radius: 0 0 16px 16px; z-index: 30; }
 body[data-fi="midfi"] .phone .sb { background: #FFFFFF; }
 body[data-fi="midfi"] .b-col { padding-top: 12px; }
 body[data-fi="midfi"] .b-label { margin-bottom: 16px; }
-body[data-fi="midfi"] .b-label .via { color: #7A6AF0; font-weight: 800; }
+body[data-fi="midfi"] .b-label .via { color: #0068C4; font-weight: 800; }
 body[data-fi="midfi"] .b-title { font-weight: 900; }
 body[data-fi="midfi"] .b-row { position: relative; }
 body[data-fi="midfi"] svg.flow { position: absolute; z-index: 40; pointer-events: none; overflow: visible; }
-body[data-fi="midfi"] .phone .more { background: #7A6AF0; }
+body[data-fi="midfi"] .phone .more { background: #0068C4; }
