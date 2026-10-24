@@ -43,7 +43,7 @@ const AUDIT = [
 const page = (inner) => `<section class="page">${inner}</section>`;
 const cover = () => page(`<div class="b-over"><span>Stash / Stash a skill a day.</span><span>${FI[0]} / ${FI[1]}</span></div>
   <h1 class="c-title" id="cover">${FI[1]}</h1><p class="c-lead">${ORDER.length} screens on ${BOARDS.length} boards. ${FI[2]}</p>
-  <div class="c-map">${[['Start', [0, 1]], ['Learn', [2, 3]], ['Keep', [4, 5]], ['Grow', [6, 7]], ['Listen, convert', [8, 9]], ['Generate, manage', [10, 11]], ['Prove, keep', [12]]].map(([k, bs]) => `<div class="r"><span class="k">${k}</span>${bs.flatMap((b) => { const ids = BOARDS[b][2]; return [[ids[0], ids[1]], [ids[2], ids[3]]].map((pair) => `<a href="#b-${b}"><b>${pair.map((i) => SCREENS[i].title).join(' · ')}</b><span>Board ${b + 1} · screens ${num(pair[0])} and ${num(pair[1])}</span></a>`); }).join('')}</div>`).join('')}</div>
+  <div class="c-map">${[['Start', [0, 1]], ['Learn', [2, 3]], ['My Stash', [4, 5]], ['Jobs and skills', [6, 7]], ['Listen', [8, 9]], ['PDF to podcast', [10, 11]], ['Checks and sync', [12]]].map(([k, bs]) => `<div class="r"><span class="k">${k}</span>${bs.flatMap((b) => { const ids = BOARDS[b][2]; return [[ids[0], ids[1]], [ids[2], ids[3]]].map((pair) => `<a href="#b-${b}"><b>${pair.map((i) => SCREENS[i].title).join(' · ')}</b><span>Board ${b + 1} · screens ${num(pair[0])} and ${num(pair[1])}</span></a>`); }).join('')}</div>`).join('')}</div>
   <div class="c-how"><p><b>How to read this.</b> Each board shows four phones in journey order with a design note under each. An arrow between two phones names the control that links them. ${fi === 'lofi' ? 'This sheet is for layout and flow only; links are added in the interactive wireframe.' : 'Buttons, rows and tabs inside the phones are links: they jump to the screen they open. Typing, playback and file picking need the clickable prototype.'} A "continues" tag means the screen scrolls.</p>
   <p><b>What is real and what is sample.</b> Courses, sample episodes and four sample job listings were written for the prototype and are labelled. Live job listings come from MyCareersFuture. The phones on these boards show sample data only. <a href="#audit">Audit and changes →</a></p></div>`);
 const audit = () => page(`<div class="b-over"><span>Stash / design audit</span><span>${FI[0]} / ${FI[1]}</span></div>
@@ -77,10 +77,19 @@ document.querySelectorAll('.b-col').forEach((col) => {
 function flowArrow(rowEl, via, next) {
   const R = rowEl.getBoundingClientRect(), v = via.getBoundingClientRect(), n = next.querySelector('.phone').getBoundingClientRect(), own = via.closest('.phone').getBoundingClientRect();
   // The badge marks the tapped control; the line leaves from the phone's edge so it never crosses neighbouring controls.
-  const bx = Math.min(v.right, own.right - 20) - R.left, sx = own.right - R.left + 12, sy = v.top + v.height / 2 - R.top, ex = n.left - R.left - 4, ey = Math.max(n.top - R.top + 120, Math.min(sy + 140, n.bottom - R.top - 160));
-  const mx = (sx + ex) / 2 + 6, r = 14, down = ey >= sy ? 1 : -1;
-  const d = Math.abs(ey - sy) < 2 * r ? `M${sx} ${sy} H${ex}` : `M${sx} ${sy} H${mx - r} Q${mx} ${sy} ${mx} ${sy + down * r} V${ey - down * r} Q${mx} ${ey} ${mx + r} ${ey} H${ex}`;
-  rowEl.insertAdjacentHTML('beforeend', `<svg class="flow" style="left:0;top:0;width:${R.width}px;height:${R.height}px" viewBox="0 0 ${R.width} ${R.height}" aria-hidden="true"><path d="${d}" fill="none" stroke="#0088FF" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M${ex - 16} ${ey - 11} L${ex + 2} ${ey} L${ex - 16} ${ey + 11} Z" fill="#0088FF"/><path d="M${bx} ${sy} H${sx}" stroke="#0088FF" stroke-width="2.5" stroke-dasharray="2 5" stroke-linecap="round"/><circle cx="${bx}" cy="${sy}" r="17" fill="#0088FF" stroke="#FFFFFF" stroke-width="3"/><path d="M${bx + 2} ${sy - 10} L${bx - 6} ${sy + 2} H${bx} L${bx - 2} ${sy + 10} L${bx + 6} ${sy - 2} H${bx} Z" fill="#FFFFFF"/></svg>`);
+  const FRAME = 13; // the device frame drawn outside each phone
+  // Badge just past the tapped control when that spot is free, otherwise tucked inside its right end.
+  const others = [...via.closest('.phone').querySelectorAll('button, a, input, label.btn, .chip, .row')].filter((e) => e !== via && !via.contains(e) && !e.contains(via)).map((e) => e.getBoundingClientRect());
+  const cy = v.top + v.height / 2, hits = (x) => others.some((o) => o.width && x + 17 > o.left && x - 17 < o.right && cy + 17 > o.top && cy - 17 < o.bottom);
+  const outside = v.right + 20, bxAbs = !hits(outside) && outside < own.right - 18 ? outside : Math.min(v.right - 16, own.right - 20);
+  // The dotted lead-in to the phone edge is drawn only when it would not cross another control.
+  const lead = !others.some((o) => o.width && o.left > bxAbs && o.left < own.right && cy > o.top && cy < o.bottom);
+  const bx = bxAbs - R.left, sx = own.right - R.left + FRAME + 2, sy = cy - R.top;
+  const ex = n.left - R.left - FRAME - 1, top = n.top - R.top + 70, bottom = n.bottom - R.top - 70;
+  const ey = Math.max(top, Math.min(sy, bottom)); // straight across whenever the target phone spans the same height
+  const mx = (sx + ex - 14) / 2, r = Math.min(10, (ex - sx) / 4), down = ey >= sy ? 1 : -1;
+  const d = Math.abs(ey - sy) < 1 ? `M${sx} ${sy} H${ex - 14}` : `M${sx} ${sy} H${mx - r} Q${mx} ${sy} ${mx} ${sy + down * r} V${ey - down * r} Q${mx} ${ey} ${mx + r} ${ey} H${ex - 14}`;
+  rowEl.insertAdjacentHTML('beforeend', `<svg class="flow" style="left:0;top:0;width:${R.width}px;height:${R.height}px" viewBox="0 0 ${R.width} ${R.height}" aria-hidden="true"><path d="${d}" fill="none" stroke="#0088FF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M${ex - 16} ${ey - 9} L${ex} ${ey} L${ex - 16} ${ey + 9} Z" fill="#0088FF"/>${lead ? `<path d="M${bx} ${sy} H${sx}" stroke="#0088FF" stroke-width="2.5" stroke-dasharray="2 5" stroke-linecap="round"/>` : ''}<circle cx="${bx}" cy="${sy}" r="17" fill="#0088FF" stroke="#FFFFFF" stroke-width="3"/><path d="M${bx + 2} ${sy - 10} L${bx - 6} ${sy + 2} H${bx} L${bx - 2} ${sy + 10} L${bx + 6} ${sy - 2} H${bx} Z" fill="#FFFFFF"/></svg>`);
 }
 document.querySelectorAll('.b-row').forEach((rowEl) => {
   const cols = [...rowEl.children];

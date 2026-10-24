@@ -26,10 +26,11 @@ Rebuild the three PDFs (needs Google Chrome and Python with PyMuPDF):
 tools/build-pdfs.sh
 ```
 
-Rebuild the editable draw.io version of the lo-fi boards:
+Rebuild the editable draw.io files (lo-fi and mid-fi):
 
 ```bash
-tools/build-drawio.sh
+tools/build-drawio.sh lofi
+tools/build-drawio.sh midfi
 ```
 
 ## Deploy

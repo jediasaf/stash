@@ -1,24 +1,26 @@
 #!/bin/bash
-# Exports the lo-fi boards as an editable draw.io file. Run from the project root.
+# Exports the lo-fi (default) or mid-fi boards as an editable draw.io file. Run from the project root.
+# Usage: tools/build-drawio.sh [lofi|midfi]
 set -e
 cd "$(dirname "$0")/.."
 CHROME="${CHROME:-/Applications/Google Chrome.app/Contents/MacOS/Google Chrome}"
-PORT=4188; TMP="$(mktemp -d)"
+FI="${1:-lofi}"; PORT=4188; TMP="$(mktemp -d)"
+[ "$FI" = midfi ] && OUT=deliverables/04-Midfi-Mobile-Wireframe.drawio || OUT=deliverables/01-Lofi-Mobile-Wireframe.drawio
 python3 -m http.server $PORT >/dev/null 2>&1 & SERVER=$!
 trap 'kill $SERVER 2>/dev/null' EXIT
 sleep 1
 "$CHROME" --headless=new --disable-gpu --window-size=1700,1200 --virtual-time-budget=9000 --user-data-dir="$TMP/p" \
-  --dump-dom "http://localhost:$PORT/board.html?fi=lofi&export=drawio" > "$TMP/dom.html" 2>/dev/null & CPID=$!
+  --dump-dom "http://localhost:$PORT/board.html?fi=$FI&export=drawio" > "$TMP/dom.html" 2>/dev/null & CPID=$!
 for i in $(seq 1 60); do sleep 1; grep -q '</html>' "$TMP/dom.html" 2>/dev/null && break; kill -0 $CPID 2>/dev/null || break; done
 kill $CPID 2>/dev/null || true; wait $CPID 2>/dev/null || true
-python3 - "$TMP/dom.html" <<'PY'
+python3 - "$TMP/dom.html" "$OUT" <<'PY'
 import sys, re, html, xml.etree.ElementTree as ET
 dom = open(sys.argv[1], encoding="utf-8").read()
 m = re.search(r'<pre id="drawio">(.*?)</pre>', dom, re.S)
 if not m: sys.exit("export failed: no draw.io payload in page")
 xml = html.unescape(m.group(1))
 root = ET.fromstring(xml)  # must be well-formed
-out = "deliverables/01-Lofi-Mobile-Wireframe.drawio"
+out = sys.argv[2]
 open(out, "w", encoding="utf-8").write(xml)
 ds = root.findall("diagram")
 ids = set(); dup = 0; orphans = 0; edges = 0

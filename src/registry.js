@@ -9,19 +9,19 @@ export const SCREENS = { ...start, ...learn, ...growth, ...listen };
 
 /** Workshop boards: four phones each, in journey order. */
 export const BOARDS = [
-  ['Start with the person', 'Welcome, sign-in, recovery, goal', ['welcome', 'signin', 'recover', 'ob-goal']],
-  ['Make it personal', 'Skills, interests, rhythm, Today', ['ob-resume', 'ob-interests', 'ob-prefs', 'today']],
-  ['Short sessions', 'Bites, Explore, Surprise me, course', ['bites', 'explore', 'surprise', 'course']],
-  ['Read, reflect, check', 'Reader, takeaway, quiz, completion', ['reader', 'takeaway', 'quiz', 'complete']],
-  ['Keep what matters', 'My Stash, takeaways, empty state, import', ['stash', 'collection', 'stash-empty', 'import']],
-  ['Bring in, take out', 'Import review, failure recovery, export', ['import-review', 'import-error', 'export', 'export-done']],
-  ['Evidence before claims', 'Growth, roles, job detail, comparison', ['growth', 'jobs', 'job', 'compare']],
-  ['Close the gap', 'Skills Planner, skill, proof of skill, plan', ['gaps', 'skill', 'evidence', 'plan']],
-  ['Listen', 'Audio home, episode, player, queue and sleep', ['podcasts', 'episode', 'player', 'player-sheet']],
-  ['PDF to podcast: the source', 'Upload, review, configure, script', ['p2p-upload', 'p2p-review', 'p2p-config', 'p2p-script']],
-  ['PDF to podcast: the audio', 'Generate, recover, manage, transcript', ['p2p-generate', 'p2p-error', 'p2p-episode', 'transcript']],
-  ['Sources, schedule, account', 'Source page, calendar, profile, preferences', ['p2p-source', 'calendar', 'profile', 'settings']],
-  ['Prove it, keep it', 'Skill check, result, sync, sync on a new device', ['check', 'check-done', 'sync', 'sync-join']],
+  ['Sign up and sign in', 'Welcome, sign in, reset password, goal', ['welcome', 'signin', 'recover', 'ob-goal']],
+  ['Onboarding', 'Skills and resume, interests, study time, Today', ['ob-resume', 'ob-interests', 'ob-prefs', 'today']],
+  ['Discover', 'Daily bites, Explore, Surprise me, course page', ['bites', 'explore', 'surprise', 'course']],
+  ['Learn', 'Reader, takeaway, recap question, course complete', ['reader', 'takeaway', 'quiz', 'complete']],
+  ['My Stash', 'Saved, takeaways, empty state, import', ['stash', 'collection', 'stash-empty', 'import']],
+  ['Import and export', 'Review import, import error, export, export done', ['import-review', 'import-error', 'export', 'export-done']],
+  ['Jobs', 'Growth, suggested roles, job details, comparison', ['growth', 'jobs', 'job', 'compare']],
+  ['Skills', 'Skills Planner, skill detail, add proof, study plan', ['gaps', 'skill', 'evidence', 'plan']],
+  ['Listen', 'Listen home, episode, player, queue and sleep timer', ['podcasts', 'episode', 'player', 'player-sheet']],
+  ['PDF to podcast: setup', 'Upload, review pages, settings, script', ['p2p-upload', 'p2p-review', 'p2p-config', 'p2p-script']],
+  ['PDF to podcast: audio', 'Generating, error, episode, transcript', ['p2p-generate', 'p2p-error', 'p2p-episode', 'transcript']],
+  ['Account and schedule', 'Source page, calendar, profile, preferences', ['p2p-source', 'calendar', 'profile', 'settings']],
+  ['Skill checks and sync', 'Skill check, result, sync, sync code', ['check', 'check-done', 'sync', 'sync-join']],
 ];
 export const ORDER = BOARDS.flatMap((b) => b[2]);
 export const num = (id) => String(ORDER.indexOf(id) + 1).padStart(2, '0');
