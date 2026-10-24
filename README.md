@@ -16,7 +16,7 @@ No build step and no dependencies to install.
 python3 ~/Downloads/Projects/stash/tools/serve.py 4180 ~/Downloads/Projects/stash
 ```
 
-Open http://localhost:4180. The page shows only the phone: framed on a wide window, full screen on a phone. Add `?fi=wire` or `?fi=lofi` to the URL for the other fidelities. Sample data loads from Profile > Preferences > Load showcase data.
+Open http://localhost:4180. The page shows only the phone: framed on a wide window, full screen on a phone. Add `?fi=midfi`, `?fi=wire` or `?fi=lofi` to the URL for the other fidelities. Sample data loads from Profile > Preferences > Load showcase data.
 
 A single self-contained file, `deliverables/Stash-Mobile-Prototype.html`, opens by double-click with no server. Rebuild it with `tools/build-single.sh` (uses esbuild through npx).
 

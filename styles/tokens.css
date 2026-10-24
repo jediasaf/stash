@@ -94,3 +94,15 @@
   --r-card: 0px; --r-ctl: 0px; --r-sheet: 0px; --r-pill: 0px;
   --font: Helvetica, Arial, sans-serif;
 }
+
+/* Mid-fi: real layout in greys, a dark search bar, image placeholders. No brand colour. */
+[data-fi="midfi"] {
+  --emerald: #2E3138; --emerald-strong: #2E3138; --emerald-hover: #44474F; --emerald-tint: #EDEDF0; --on-emerald: #FFFFFF; --pastel: #C8C8CE;
+  --ink: #1E1F24; --ink-2: #5F626A; --mint: #FFFFFF; --mint-light: #FFFFFF;
+  --surface: #F3F3F5; --surface-strong: #F3F3F5; --surface-solid: #FFFFFF;
+  --bar: #FFFFFF; --bar-solid: #FFFFFF; --edge: #F3F3F5; --hair: #E3E3E7; --field-border: #8B8E96;
+  --warn: #3C3E44; --warn-bg: #EDEDF0; --danger: #3C3E44; --danger-bg: #EDEDF0; --info-bg: #F3F3F5;
+  --shadow-1: none; --shadow-2: none; --blur: none; --light: none;
+  --r-card: 8px; --r-ctl: 6px; --r-sheet: 16px; --r-pill: 6px;
+  --font: "Lato", "Nunito Sans", system-ui, sans-serif;
+}

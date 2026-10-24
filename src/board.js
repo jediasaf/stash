@@ -6,7 +6,7 @@ import { esc } from './ui.js';
 
 const fi = new URLSearchParams(location.search).get('fi') || 'proto';
 document.body.dataset.fi = fi;
-const FI = { proto: ['03', 'Mobile prototype', 'Blue glass. Translucent white over pastel light, vivid blue actions.'], wire: ['02', 'Interactive wireframe', 'Structure and links. Dashed outlines are tappable; the number is the screen it opens.'], lofi: ['01', 'Lo-fi wireframe', 'Technical diagram: plain boxes, connectors and notes. Layout and flow only.'] }[fi];
+const FI = { proto: ['03', 'Mobile prototype', 'Blue glass. Translucent white over pastel light, vivid blue actions.'], wire: ['02', 'Interactive wireframe', 'Structure and links. Dashed outlines are tappable; the number is the screen it opens.'], lofi: ['01', 'Lo-fi wireframe', 'Technical diagram: plain boxes, connectors and notes. Layout and flow only.'], midfi: ['04', 'Mid-fi wireframe', 'Real layout and copy in greys, image placeholders, and the tap that leads to each next screen.'] }[fi];
 const NOW = new Date('2026-10-12T19:10:00');
 const MINI = ['today', 'stash', 'reader', 'transcript', 'p2p-source', 'player', 'player-sheet', 'podcasts'];
 const ACT_TO = { guest: 'today', 'start-create': 'signin', signin: 'today', 'ob-finish': 'today', surprise: 'surprise', 'takeaway-save': 'quiz', 'course-complete': 'complete', 'evidence-save': 'skill', 'plan-create': 'plan', 'import-text': 'import-review', 'import-save': 'stash', 'export-run': 'export-done', 'p2p-script': 'p2p-script', 'p2p-generate': 'p2p-generate', 'job-retry': 'p2p-generate', play: 'player', 'rhythm-save': 'calendar', signout: 'welcome', 'set-career': 'ob-goal', 'seek-seg': 'player', 'ep-del': 'stash', 'check-submit': 'check-done', 'check-retake': 'check', 'sync-on': 'sync', 'sync-join': 'today', 'job-fallback': 'p2p-episode' };
@@ -56,7 +56,7 @@ const board = ([t, sub, ids], b) => page(`<div class="b-over"><span>Stash / boar
   <div class="b-foot"><span>390 pt wide phone · sample content · ${FI[1].toLowerCase()}</span><span>${b > 0 ? `<a href="#b-${b - 1}">← Board ${b}</a> &nbsp; ` : ''}<a href="#cover">Journey map</a>${b < BOARDS.length - 1 ? ` &nbsp; <a href="#b-${b + 1}">Board ${b + 2} →</a>` : ''}</span></div>`);
 
 // The lo-fi wireframe is one continuous sheet (the team's Phase 2 format): boards stacked, no notes, no page breaks.
-const SHEET = fi === 'lofi';
+const SHEET = fi === 'lofi' || fi === 'midfi';
 document.body.dataset.sheet = SHEET ? '1' : '';
 document.getElementById('boards').innerHTML = SHEET ? BOARDS.map(board).join('') : cover() + audit() + BOARDS.map(board).join('');
 
@@ -73,6 +73,15 @@ document.querySelectorAll('.b-col').forEach((col) => {
     el.insertAdjacentHTML('beforeend', `<a class="hot" href="#s-${t}" aria-hidden="true" tabindex="-1"></a>${el.closest('.tabs') ? '' : `<span class="badge">${num(t)}</span>`}`);
   });
 });
+// Mid-fi: a purple badge on the control that is tapped, and an elbow connector from it to the next phone.
+function flowArrow(rowEl, via, next) {
+  const R = rowEl.getBoundingClientRect(), v = via.getBoundingClientRect(), n = next.querySelector('.phone').getBoundingClientRect(), own = via.closest('.phone').getBoundingClientRect();
+  // The badge marks the tapped control; the line leaves from the phone's edge so it never crosses neighbouring controls.
+  const bx = Math.min(v.right, own.right - 20) - R.left, sx = own.right - R.left + 12, sy = v.top + v.height / 2 - R.top, ex = n.left - R.left - 4, ey = Math.max(n.top - R.top + 120, Math.min(sy + 140, n.bottom - R.top - 160));
+  const mx = (sx + ex) / 2 + 6, r = 14, down = ey >= sy ? 1 : -1;
+  const d = Math.abs(ey - sy) < 2 * r ? `M${sx} ${sy} H${ex}` : `M${sx} ${sy} H${mx - r} Q${mx} ${sy} ${mx} ${sy + down * r} V${ey - down * r} Q${mx} ${ey} ${mx + r} ${ey} H${ex}`;
+  rowEl.insertAdjacentHTML('beforeend', `<svg class="flow" style="left:0;top:0;width:${R.width}px;height:${R.height}px" viewBox="0 0 ${R.width} ${R.height}" aria-hidden="true"><path d="${d}" fill="none" stroke="#7A6AF0" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M${ex - 16} ${ey - 11} L${ex + 2} ${ey} L${ex - 16} ${ey + 11} Z" fill="#7A6AF0"/><path d="M${bx} ${sy} H${sx}" stroke="#7A6AF0" stroke-width="2.5" stroke-dasharray="2 5" stroke-linecap="round"/><circle cx="${bx}" cy="${sy}" r="17" fill="#7A6AF0" stroke="#FFFFFF" stroke-width="3"/><path d="M${bx + 2} ${sy - 10} L${bx - 6} ${sy + 2} H${bx} L${bx - 2} ${sy + 10} L${bx + 6} ${sy - 2} H${bx} Z" fill="#FFFFFF"/></svg>`);
+}
 document.querySelectorAll('.b-row').forEach((rowEl) => {
   const cols = [...rowEl.children];
   cols.slice(0, -1).forEach((col, i) => {
@@ -81,6 +90,7 @@ document.querySelectorAll('.b-row').forEach((rowEl) => {
     if (!via) return;
     const x = (col.offsetLeft + col.offsetWidth + next.offsetLeft) / 2;
     col.querySelector('.b-label').insertAdjacentHTML('beforeend', `<span class="via">${esc(via.dataset.label.length > 20 ? via.dataset.label.slice(0, 19) + '…' : via.dataset.label)} →</span>`);
+    if (fi === 'midfi') return flowArrow(rowEl, via, next);
     rowEl.insertAdjacentHTML('beforeend', `<div class="b-arrow" style="left:${x}px"><svg width="34" height="14" viewBox="0 0 34 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7h22M24 2.5l8 4.500-8 4.500z"/></svg></div>`);
   });
 });

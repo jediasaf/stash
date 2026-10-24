@@ -9,7 +9,7 @@ python3 -m http.server $PORT >/dev/null 2>&1 & SERVER=$!
 trap 'kill $SERVER 2>/dev/null' EXIT
 sleep 1
 mkdir -p deliverables
-for pair in "lofi:01-Lofi-Mobile-Wireframe" "wire:02-Interactive-Mobile-Wireframe" "proto:03-Mobile-Prototype"; do
+for pair in "lofi:01-Lofi-Mobile-Wireframe" "wire:02-Interactive-Mobile-Wireframe" "proto:03-Mobile-Prototype" "midfi:04-Midfi-Mobile-Wireframe"; do
   fi="${pair%%:*}"; name="${pair##*:}"
   out="deliverables/$name.pdf"; rm -f "$out"
   "$CHROME" --headless=new --disable-gpu --no-pdf-header-footer --virtual-time-budget=9000 \
