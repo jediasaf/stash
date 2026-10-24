@@ -55,7 +55,10 @@ const board = ([t, sub, ids], b) => page(`<div class="b-over"><span>Stash / boar
   <div class="b-row">${ids.map((id) => `<div class="b-col" id="s-${id}" data-id="${id}"><div class="b-label"><b>${num(id)}</b><span class="nm">${esc(SCREENS[id].title)}</span></div>${phone(id)}<div class="b-note"><h3>${fi === 'lofi' ? 'Design note' : 'Interaction and behaviour'}</h3><p>${esc(SCREENS[id].note)}</p></div></div>`).join('')}</div>
   <div class="b-foot"><span>390 pt wide phone · sample content · ${FI[1].toLowerCase()}</span><span>${b > 0 ? `<a href="#b-${b - 1}">← Board ${b}</a> &nbsp; ` : ''}<a href="#cover">Journey map</a>${b < BOARDS.length - 1 ? ` &nbsp; <a href="#b-${b + 1}">Board ${b + 2} →</a>` : ''}</span></div>`);
 
-document.getElementById('boards').innerHTML = cover() + audit() + BOARDS.map(board).join('');
+// The lo-fi wireframe is one continuous sheet (the team's Phase 2 format): boards stacked, no notes, no page breaks.
+const SHEET = fi === 'lofi';
+document.body.dataset.sheet = SHEET ? '1' : '';
+document.getElementById('boards').innerHTML = SHEET ? BOARDS.map(board).join('') : cover() + audit() + BOARDS.map(board).join('');
 
 // Post-render: link hot-spots, "continues" tags, arrows between linked neighbours.
 document.querySelectorAll('.b-col').forEach((col) => {
@@ -81,6 +84,7 @@ document.querySelectorAll('.b-row').forEach((rowEl) => {
     rowEl.insertAdjacentHTML('beforeend', `<div class="b-arrow" style="left:${x}px"><svg width="34" height="14" viewBox="0 0 34 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7h22M24 2.5l8 4.500-8 4.500z"/></svg></div>`);
   });
 });
+if (SHEET) { const h = Math.ceil(document.getElementById('boards').getBoundingClientRect().height); const st = document.createElement('style'); st.textContent = `@page { size: 1512px ${h}px; margin: 0; }`; document.head.append(st); }
 document.documentElement.dataset.ready = '1';
 
 // ?export=drawio replaces the page with the draw.io XML so a headless browser can dump it.

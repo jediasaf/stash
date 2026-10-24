@@ -5,7 +5,7 @@ const rgb = (c) => { const m = c.match(/[\d.]+/g); if (!m) return null; const [r
 const R = (n) => Math.round(n * 10) / 10;
 
 export function toDrawio() {
-  const pages = [...document.querySelectorAll('.page')];
+  const pages = document.body.dataset.sheet === '1' ? [document.getElementById('boards')] : [...document.querySelectorAll('.page')];
   const pageId = (i) => 'page-' + i;
   const linkTo = (href) => { const m = href.match(/^#b-(\d+)$/); if (m) return pageId(+m[1] + 2); if (href === '#cover') return pageId(0); if (href === '#audit') return pageId(1); return null; };
   let xml = `<mxfile host="app.diagrams.net" agent="Stash board export" version="24.0.0" type="device">`;
@@ -79,7 +79,7 @@ export function toDrawio() {
     for (const ch of page.children) walk(ch, 1, P.left, P.top, null, 1);
     // real connectors between phones that link to each other
     page.querySelectorAll('.b-row').forEach((row) => { const cols = [...row.querySelectorAll('.b-col')]; cols.slice(0, -1).forEach((col, i) => { const via = col.querySelector('.b-label .via'); if (!via) return; const a = phoneIds.get(col.querySelector('.phone')), b = phoneIds.get(cols[i + 1].querySelector('.phone')); cells.push(`<mxCell id="c${pi}-${n++}" value="" style="endArrow=block;endFill=1;html=1;rounded=0;strokeColor=#000000;exitX=1;exitY=0.45;entryX=0;entryY=0.45;" edge="1" parent="1" source="${a}" target="${b}"><mxGeometry relative="1" as="geometry"/></mxCell>`); }); });
-    const name = pi === 0 ? 'Journey map' : pi === 1 ? 'Audit' : `Board ${pi - 1}`;
+    const name = document.body.dataset.sheet === '1' ? 'Lo-fi wireframe' : pi === 0 ? 'Journey map' : pi === 1 ? 'Audit' : `Board ${pi - 1}`;
     xml += `<diagram id="${pageId(pi)}" name="${name}"><mxGraphModel dx="1600" dy="1100" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="${Math.round(P.width)}" pageHeight="${Math.round(P.height)}" math="0" shadow="0"><root><mxCell id="0"/><mxCell id="1" parent="0"/>${cells.join('')}</root></mxGraphModel></diagram>`;
   });
   return xml + '</mxfile>';

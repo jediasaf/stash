@@ -77,3 +77,13 @@ body[data-fi="lofi"] .c-how, body[data-fi="lofi"] .b-foot span, body[data-fi="lo
 body[data-fi="lofi"] .a-item { background: #fff; border: 1px solid #000; border-bottom: 0; padding: 16px; margin: 0; }
 body[data-fi="lofi"] .phone .more { border-radius: 0; background: #fff; color: #000; border: 1px solid #000; }
 body[data-fi="lofi"] .b-sub, body[data-fi="lofi"] .c-lead, body[data-fi="lofi"] .b-title, body[data-fi="lofi"] .c-title { width: fit-content; background: #fff; }
+
+/* Continuous sheet (lo-fi wireframe): one tall white page, boards stacked, no notes, footers or page breaks. */
+body[data-sheet="1"] #boards { width: 1512px; margin: 0 auto; background: #FFFFFF; }
+body[data-sheet="1"] .page { height: auto; padding: 24px 56px 20px; background: #FFFFFF; break-after: auto; page-break-after: auto; margin: 0; }
+body[data-sheet="1"] .page:first-child { padding-top: 56px; }
+body[data-sheet="1"] .page:last-child { padding-bottom: 56px; }
+body[data-sheet="1"] .page::before { display: none; }
+body[data-sheet="1"] .b-note, body[data-sheet="1"] .b-foot, body[data-sheet="1"] .b-over span + span { display: none; }
+body[data-sheet="1"] .b-title { font-size: 34px; margin-top: 4px; }
+body[data-sheet="1"] .b-row { flex: none; margin-top: 10px; }

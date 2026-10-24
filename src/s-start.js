@@ -13,7 +13,7 @@ export default {
     note: 'Three clear choices, ranked. No tab bar before sign-in. States the three things Stash does in plain words and says up front that this build holds sample content.',
     render: () => ({
       body: `<div class="stack">
-        <img class="hero-art" src="assets/stash-hero-780.webp" srcset="assets/stash-hero-780.webp 780w, assets/stash-hero-1200.webp 1200w" sizes="(min-width: 430px) 430px, 100vw" width="780" height="509" alt="A blue STASH box opening, with the line: Stash a skill a day." fetchpriority="high">
+        <img class="hero-art" src="assets/stash-hero-780.webp" srcset="assets/stash-hero-780.webp 780w, assets/stash-hero-1200.webp 1200w" sizes="(min-width: 430px) 430px, 100vw" width="780" height="464" alt="A blue STASH box opening, with the line: Stash a skill a day." fetchpriority="high">
         <div class="hero-ph" aria-hidden="true">Brand image: STASH box, "Stash a skill a day"</div>
         <h1 class="sr" tabindex="-1">Stash a skill a day.</h1>
         <p class="lead">Short lessons, your PDFs as podcasts, and proof of the skills your next role needs.</p>

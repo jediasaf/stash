@@ -307,9 +307,9 @@ div.row { cursor: default; }
 .search + .chips { margin-top: 18px; }
 
 /* Brand hero on Welcome: full-bleed, keeps its aspect ratio so nothing shifts while it loads */
-.hero-art { display: block; width: calc(100% + var(--gutter) * 2); max-width: none; height: auto; aspect-ratio: 780 / 509; margin: 0 calc(var(--gutter) * -1); }
+.hero-art { display: block; width: calc(100% + var(--gutter) * 2); max-width: none; height: auto; aspect-ratio: 780 / 464; margin: 0 calc(var(--gutter) * -1); }
 [data-fi="lofi"] .hero-art, [data-fi="wire"] .hero-art { filter: grayscale(1) contrast(1.1); }
 .hero-ph { display: none; }
 [data-fi="lofi"] .hero-art { display: none; }
-[data-fi="lofi"] .hero-ph { display: grid; place-items: center; aspect-ratio: 780 / 509; margin: 0 calc(var(--gutter) * -1); border: 1px solid #000; font-size: 13px; color: #333; text-align: center; padding: 0 24px;
+[data-fi="lofi"] .hero-ph { display: grid; place-items: center; aspect-ratio: 780 / 464; margin: 0 calc(var(--gutter) * -1); border: 1px solid #000; font-size: 13px; color: #333; text-align: center; padding: 0 24px;
   background: linear-gradient(to top right, transparent calc(50% - 0.5px), #000 calc(50% - 0.5px), #000 calc(50% + 0.5px), transparent calc(50% + 0.5px)), linear-gradient(to bottom right, transparent calc(50% - 0.5px), #000 calc(50% - 0.5px), #000 calc(50% + 0.5px), transparent calc(50% + 0.5px)), #F5F5F5; }
